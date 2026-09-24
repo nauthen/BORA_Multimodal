@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "source_dir": "/marimo/Multimodal_Deep_Fusion_dual_decoder_effnet_v2/Multimodal_Deep_Fusion",
+  "repo_id": "thuannamtrinh/resnet50",
+  "repo_type": "model",
+  "path_in_repo": "",
+  "create_repo": false,
+  "include_source_code": true
+}

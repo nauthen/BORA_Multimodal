@@ -1,0 +1,103 @@
+# Multimodal Deep Fusion — Dual-Decoder Temporal BORA (PANNs Cnn6 + EfficientNetB0)
+
+Audio-video fish feeding intensity classification (AV-FFIA, 27K two-second
+clips, 4 ordinal classes `none < weak < medium < strong`).
+
+Architecture under study: **Dual-Decoder Temporal BORA-Fuse** — an 8-frame,
+motion-aware, boundary-conditioned temporal fusion with two coupled decoders:
+
+- **Ordinal decoder (CORN)** — three conditional boundaries with per-boundary
+  temporal queries, uncertainty-calibrated reliability gates, and teacher
+  decision residuals; guarantees rank-consistent predictions.
+- **Nominal decoder (exact-class branch)** — a parallel 4-class head over
+  pooled boundary evidence, coupled into the final decision through a learned
+  logit-space residual gate.
+- **Teacher preservation** — label-anchored cross-entropy keeps the reused
+  single-modal PANNs/Swin-style classifier heads discriminative during
+  fine-tuning, preventing the documented teacher drift.
+
+Rationale, failed post-hoc alternatives that motivated this design, and the
+hypotheses H1–H3 are recorded in `docs/temporal_bora_research.md`. The protocol
+is deliberately academic: one training run, best checkpoint selected on clean
+validation only, test evaluated once by the trainer, and every result reported
+with accuracy together with rank MAE, QWK, within-one accuracy, and severe-error
+rate.
+
+## 0. Prerequisites
+
+- Same seed-42 random holdout as all previous runs
+  (21,467 / 2,800 / 2,800), generated automatically by `FishDataSplitter`.
+- **Audio teacher checkpoint**:
+  `/marimo/checkpoints/audio_run/DL_audio/checkpoint/panns_cnn6/audio_best.pt`
+  with its `splits/` sidecar beside it.
+- **Video teacher checkpoint for EfficientNetB0**: train the single-modal video
+  model on the identical split first, then place it at
+  `/marimo/checkpoints/video_run/DL_video/checkpoint/efficientnet_b0/video_best.pt`
+  with a matching `splits/` sidecar. Identity/label equality across splits is
+  enforced by `validate_checkpoint_split_integrity`.
+- Dataset root: `/marimo/Fish_Feeding_Intensity_Dataset`.
+
+## 1. Install
+
+```bash
+pip install -r requirements.txt
+```
+
+Note: `decord` has no wheel for Python 3.13; the loader automatically falls
+back to OpenCV decoding when decord is unavailable (slower preload, identical
+sampling logic).
+
+## 2. Train + evaluate
+
+Edit only `config/train_config.json` (already set to
+`EfficientNetB0 + temporal_bora_fusion`, `num_frames=8`, dual-decoder losses
+`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`), then:
+
+To replace the PANNs Cnn6 audio branch with the Tiny PANNs + ECA checkpoint,
+change only the audio block (leave the audio-feature settings identical to the
+single-modal training run):
+
+```json
+"audio": {
+  "backbone": "TinyPANNS_ECA",
+  "pretrained": false,
+  "freeze": false,
+  "checkpoint_path": "/path/to/tiny_panns_eca/audio_best.pt"
+}
+```
+
+Both global and temporal BORA accept `TinyPANNS_ECA`. Their audio checkpoint
+loader remains strict and expects the single-modal wrapper keys
+`frontend.*` and `backbone.*`, preventing a silently partial or wrong-model
+load.
+
+```bash
+python main.py
+```
+
+The trainer fits, selects the best epoch by validation accuracy, reloads that
+checkpoint, runs the held-out test once, and writes to
+`outputs/PANNS_Cnn6_EfficientNetB0_temporal_bora_fusion/holdout/`:
+
+- `result.csv` — accuracy, mAP, rank MAE, QWK, within-one, severe-error rate;
+- `history.csv`, `learning_curves.png`, confusion outputs;
+- `checkpoint/multimodal_best.pt` plus `checkpoint/snapshots/*.pt`
+  (every new validation-best) for reproducibility/analysis;
+- `predictions.csv`, `gate_summary.csv` — per-sample audit of gates,
+  reliabilities and probabilities.
+
+## Tests
+
+```bash
+pytest -q
+```
+
+Covers config validation, CORN ordinal utilities, temporal views/transforms,
+fusion forward shapes, warmup + adaptive gates, gradient flow to both encoders
+and teacher residual, the nominal decoder and its coupling gate, both new loss
+terms, corruption augmentation, optimizer parameter groups, and
+checkpoint/split integrity.
+
+The `scripts/` directory retains optional analysis utilities (snapshot
+probability caching, ensemble evaluation); none of them are part of the
+reported result path.

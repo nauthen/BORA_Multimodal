@@ -1,0 +1,718 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="720pt" height="2462.4pt" viewBox="0 0 720 2462.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-15T21:53:57.037488</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 2462.4 
+L 720 2462.4 
+L 720 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 53.28 68.4 
+L 666.72 68.4 
+Q 673.2 68.4 673.2 74.88 
+L 673.2 133.92 
+Q 673.2 140.4 666.72 140.4 
+L 53.28 140.4 
+Q 46.8 140.4 46.8 133.92 
+L 46.8 74.88 
+Q 46.8 68.4 53.28 68.4 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #f4f6f8; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 205.2 166.879687 
+Q 205.2 170.638073 205.2 172.4958 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 208.6 165.6958 
+L 205.2 172.4958 
+L 201.8 165.6958 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 514.8 166.879687 
+Q 514.8 170.638073 514.8 172.4958 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 518.2 165.6958 
+L 514.8 172.4958 
+L 511.4 165.6958 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 53.28 176.4 
+L 342.72 176.4 
+Q 349.2 176.4 349.2 182.88 
+L 349.2 321.12 
+Q 349.2 327.6 342.72 327.6 
+L 53.28 327.6 
+Q 46.8 327.6 46.8 321.12 
+L 46.8 182.88 
+Q 46.8 176.4 53.28 176.4 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 377.28 176.4 
+L 666.72 176.4 
+Q 673.2 176.4 673.2 182.88 
+L 673.2 321.12 
+Q 673.2 327.6 666.72 327.6 
+L 377.28 327.6 
+Q 370.8 327.6 370.8 321.12 
+L 370.8 182.88 
+Q 370.8 176.4 377.28 176.4 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 205.2 329.600391 
+Q 205.2 342.000771 205.2 352.500494 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 208.6 345.700494 
+L 205.2 352.500494 
+L 201.8 345.700494 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 514.8 329.600391 
+Q 514.8 342.000771 514.8 352.500494 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 518.2 345.700494 
+L 514.8 352.500494 
+L 511.4 345.700494 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 53.28 356.4 
+L 342.72 356.4 
+Q 349.2 356.4 349.2 362.88 
+L 349.2 443.52 
+Q 349.2 450 342.72 450 
+L 53.28 450 
+Q 46.8 450 46.8 443.52 
+L 46.8 362.88 
+Q 46.8 356.4 53.28 356.4 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 377.28 356.4 
+L 666.72 356.4 
+Q 673.2 356.4 673.2 362.88 
+L 673.2 443.52 
+Q 673.2 450 666.72 450 
+L 377.28 450 
+Q 370.8 450 370.8 443.52 
+L 370.8 362.88 
+Q 370.8 356.4 377.28 356.4 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 514.8 481.523906 
+Q 514.8 488.160578 514.8 492.896593 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 518.2 486.096593 
+L 514.8 492.896593 
+L 511.4 486.096593 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 53.28 496.8 
+L 666.72 496.8 
+Q 673.2 496.8 673.2 503.28 
+L 673.2 648.72 
+Q 673.2 655.2 666.72 655.2 
+L 53.28 655.2 
+Q 46.8 655.2 46.8 648.72 
+L 46.8 503.28 
+Q 46.8 496.8 53.28 496.8 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 360 657.200391 
+Q 360 669.600771 360 680.100494 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 363.4 673.300494 
+L 360 680.100494 
+L 356.6 673.300494 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 53.28 684 
+L 666.72 684 
+Q 673.2 684 673.2 690.48 
+L 673.2 857.52 
+Q 673.2 864 666.72 864 
+L 53.28 864 
+Q 46.8 864 46.8 857.52 
+L 46.8 690.48 
+Q 46.8 684 53.28 684 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 360 866.000391 
+Q 360 878.400771 360 888.900494 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 363.4 882.100494 
+L 360 888.900494 
+L 356.6 882.100494 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 53.28 892.8 
+L 666.72 892.8 
+Q 673.2 892.8 673.2 899.28 
+L 673.2 1044.72 
+Q 673.2 1051.2 666.72 1051.2 
+L 53.28 1051.2 
+Q 46.8 1051.2 46.8 1044.72 
+L 46.8 899.28 
+Q 46.8 892.8 53.28 892.8 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #fff4df; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 360 1053.200391 
+Q 360 1065.600771 360 1076.100494 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 363.4 1069.300494 
+L 360 1076.100494 
+L 356.6 1069.300494 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 53.28 1080 
+L 666.72 1080 
+Q 673.2 1080 673.2 1086.48 
+L 673.2 1231.92 
+Q 673.2 1238.4 666.72 1238.4 
+L 53.28 1238.4 
+Q 46.8 1238.4 46.8 1231.92 
+L 46.8 1086.48 
+Q 46.8 1080 53.28 1080 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 360 1240.400391 
+Q 360 1252.800771 360 1263.300494 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 363.4 1256.500494 
+L 360 1263.300494 
+L 356.6 1256.500494 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 53.28 1267.2 
+L 666.72 1267.2 
+Q 673.2 1267.2 673.2 1273.68 
+L 673.2 1397.52 
+Q 673.2 1404 666.72 1404 
+L 53.28 1404 
+Q 46.8 1404 46.8 1397.52 
+L 46.8 1273.68 
+Q 46.8 1267.2 53.28 1267.2 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #edf4fb; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 205.2 1434.800391 
+Q 205.2 1439.99969 205.2 1443.298331 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 208.6 1436.498331 
+L 205.2 1443.298331 
+L 201.8 1436.498331 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 514.8 1434.800391 
+Q 514.8 1439.99969 514.8 1443.298331 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 518.2 1436.498331 
+L 514.8 1443.298331 
+L 511.4 1436.498331 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_23">
+    <path d="M 53.28 1447.2 
+L 342.72 1447.2 
+Q 349.2 1447.2 349.2 1453.68 
+L 349.2 1642.32 
+Q 349.2 1648.8 342.72 1648.8 
+L 53.28 1648.8 
+Q 46.8 1648.8 46.8 1642.32 
+L 46.8 1453.68 
+Q 46.8 1447.2 53.28 1447.2 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #eaf5ee; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_24">
+    <path d="M 377.28 1447.2 
+L 666.72 1447.2 
+Q 673.2 1447.2 673.2 1453.68 
+L 673.2 1642.32 
+Q 673.2 1648.8 666.72 1648.8 
+L 377.28 1648.8 
+Q 370.8 1648.8 370.8 1642.32 
+L 370.8 1453.68 
+Q 370.8 1447.2 377.28 1447.2 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #eaf5ee; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_25">
+    <path d="M 207.006482 1649.660229 
+Q 243.000189 1666.80009 277.277868 1683.122794 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 272.60019 1677.12952 
+L 277.277868 1683.122794 
+L 269.676642 1683.268971 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_26">
+    <path d="M 512.993518 1649.660229 
+Q 476.999811 1666.80009 442.722132 1683.122794 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 450.323358 1683.268971 
+L 442.722132 1683.122794 
+L 447.39981 1677.12952 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_27">
+    <path d="M 53.28 1684.8 
+L 666.72 1684.8 
+Q 673.2 1684.8 673.2 1691.28 
+L 673.2 1793.52 
+Q 673.2 1800 666.72 1800 
+L 53.28 1800 
+Q 46.8 1800 46.8 1793.52 
+L 46.8 1691.28 
+Q 46.8 1684.8 53.28 1684.8 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #eaf5ee; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_28">
+    <path d="M 360 1836.559336 
+Q 360 1842.481153 360 1846.502313 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke-dasharray: 6.29,2.72; stroke-dashoffset: 0; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 363.4 1839.702313 
+L 360 1846.502313 
+L 356.6 1839.702313 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke-dasharray: 6.29,2.72; stroke-dashoffset: 0; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_29">
+    <path d="M 53.28 1850.4 
+L 666.72 1850.4 
+Q 673.2 1850.4 673.2 1856.88 
+L 673.2 2088.72 
+Q 673.2 2095.2 666.72 2095.2 
+L 53.28 2095.2 
+Q 46.8 2095.2 46.8 2088.72 
+L 46.8 1856.88 
+Q 46.8 1850.4 53.28 1850.4 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #fff4df; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_30">
+    <path d="M 360 2097.199512 
+Q 360 2113.201573 360 2127.302976 
+" clip-path="url(#p613d78c8eb)" style="fill: none; stroke-dasharray: 6.29,2.72; stroke-dashoffset: 0; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+    <path d="M 363.4 2120.502976 
+L 360 2127.302976 
+L 356.6 2120.502976 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #42556b; stroke-dasharray: 6.29,2.72; stroke-dashoffset: 0; stroke: #42556b; stroke-width: 1.7; stroke-linecap: round"/>
+   </g>
+   <g id="patch_31">
+    <path d="M 53.28 2131.2 
+L 666.72 2131.2 
+Q 673.2 2131.2 673.2 2137.68 
+L 673.2 2239.92 
+Q 673.2 2246.4 666.72 2246.4 
+L 53.28 2246.4 
+Q 46.8 2246.4 46.8 2239.92 
+L 46.8 2137.68 
+Q 46.8 2131.2 53.28 2131.2 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #f4f6f8; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_32">
+    <path d="M 53.28 2275.2 
+L 666.72 2275.2 
+Q 673.2 2275.2 673.2 2281.68 
+L 673.2 2398.32 
+Q 673.2 2404.8 666.72 2404.8 
+L 53.28 2404.8 
+Q 46.8 2404.8 46.8 2398.32 
+L 46.8 2281.68 
+Q 46.8 2275.2 53.28 2275.2 
+z
+" clip-path="url(#p613d78c8eb)" style="fill: #f4f6f8; stroke: #718096; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 22px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="25.2" transform="rotate(-0 360 25.2)">DUAL-DECODER TEMPORAL BORA-FUSE</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #42556b" x="360" y="52.659062" transform="rotate(-0 360 52.659062)">main.py → config/train_config.json | B = batch size, T = 8, D = 256</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="92.530938" transform="rotate(-0 360 92.530938)">1  INPUT: PAIRED AUDIO + VIDEO</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="112.415" transform="rotate(-0 360 112.415)">Audio: mono, 64 kHz, crop/pad to 2 s → [B,128000]</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="132.575" transform="rotate(-0 360 132.575)">Video: 8 uniform RGB frames, normalize → [B,8,3,224,224]</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #42556b" x="360" y="160.823125" transform="rotate(-0 360 160.823125)">Train only: single-modality corruption / dropout before model.forward()</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="200.530938" transform="rotate(-0 198 200.530938)">2a  AUDIO ENCODER</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="220.139062" transform="rotate(-0 198 220.139062)">STFT → Log-Mel → pad → BN</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="240.299062" transform="rotate(-0 198 240.299062)">[B,1,128,128] → PANNs CNN6</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="260.250469" transform="rotate(-0 198 260.250469)">Feature hook: f_a [B,512]</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="280.410469" transform="rotate(-0 198 280.410469)">Classifier: t_a [B,4]</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="300.779062" transform="rotate(-0 198 300.779062)">SpecAugment / dropout in train</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="200.530938" transform="rotate(-0 522 200.530938)">2b  VIDEO ENCODER</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="220.139062" transform="rotate(-0 522 220.139062)">Reshape to [B×8,3,224,224]</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="240.299062" transform="rotate(-0 522 240.299062)">Shared EfficientNet-B0 per frame</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="260.250469" transform="rotate(-0 522 260.250469)">Feature hook: f_v [B,8,1280]</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="280.410469" transform="rotate(-0 522 280.410469)">Classifier: t_v [B,8,4]</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="300.779062" transform="rotate(-0 522 300.779062)">Both encoders load checkpoints</text>
+   </g>
+   <g id="text_19">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="380.530938" transform="rotate(-0 198 380.530938)">3a  AUDIO PROJECTION</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="399.930469" transform="rotate(-0 198 399.930469)">f_a → Linear 512→256</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="420.299062" transform="rotate(-0 198 420.299062)">LayerNorm → GELU → Dropout</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="440.459063" transform="rotate(-0 198 440.459063)">a [B,256] — global audio</text>
+   </g>
+   <g id="text_23">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="380.530938" transform="rotate(-0 522 380.530938)">3b  VIDEO PROJECTION</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="399.930469" transform="rotate(-0 522 399.930469)">f_v → Linear 1280→256</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="420.299062" transform="rotate(-0 522 420.299062)">LayerNorm → GELU → Dropout</text>
+   </g>
+   <g id="text_26">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="440.459063" transform="rotate(-0 522 440.459063)">v [B,8,256] — frame sequence</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #42556b" x="360" y="475.268438" transform="rotate(-0 360 475.268438)">Named tensors a, t_a and t_v are reused at the input ports below.</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="520.930938" transform="rotate(-0 360 520.930938)">4  MOTION + TEMPORAL CONTEXT</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="540.815" transform="rotate(-0 360 540.815)">INPUT: projected frames v</text>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="560.7875" transform="rotate(-0 360 560.7875)">m[0] = 0; m[t] = |v[t] − v[t−1]|</text>
+   </g>
+   <g id="text_31">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="581.135" transform="rotate(-0 360 581.135)">c = GELU(LayerNorm(Linear(m)))                 [B,8,256]</text>
+   </g>
+   <g id="text_32">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="601.295" transform="rotate(-0 360 601.295)">h = Transformer(v + c + learned position)      [B,8,256]</text>
+   </g>
+   <g id="text_33">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="621.455" transform="rotate(-0 360 621.455)">2 encoder layers · 4 heads · FFN 512 · pre-norm</text>
+   </g>
+   <g id="text_34">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="641.3925" transform="rotate(-0 360 641.3925)">Motion auxiliary: sigmoid(MLP(mean_time(c))) → score [B]</text>
+   </g>
+   <g id="text_35">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="708.130938" transform="rotate(-0 360 708.130938)">5  EVENT GATE + BOUNDARY TEMPORAL ATTENTION</text>
+   </g>
+   <g id="text_36">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="727.739063" transform="rotate(-0 360 727.739063)">INPUT: temporal tokens h, motion c, global audio a</text>
+   </g>
+   <g id="text_37">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="747.899063" transform="rotate(-0 360 747.899063)">e[t] = sigmoid(MLP([h[t], a, c[t]]))                    [B,8]</text>
+   </g>
+   <g id="text_38">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="768.059062" transform="rotate(-0 360 768.059062)">Q = reshape(Linear(a), [B,3,256]) + learned queries</text>
+   </g>
+   <g id="text_39">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="788.010469" transform="rotate(-0 360 788.010469)">α[k,t] = softmax_time(scale × cosine(Q[k],h[t]) + log e[t])</text>
+   </g>
+   <g id="text_40">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="808.170469" transform="rotate(-0 360 808.170469)">V[k] = Σ_t α[k,t] h[t]                                  [B,3,256]</text>
+   </g>
+   <g id="text_41">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="828.330469" transform="rotate(-0 360 828.330469)">g = mean_boundary(V)                                    [B,256]</text>
+   </g>
+   <g id="text_42">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="848.699062" transform="rotate(-0 360 848.699062)">Each boundary k selects a different temporal evidence distribution.</text>
+   </g>
+   <g id="text_43">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="916.930938" transform="rotate(-0 360 916.930938)">6  REUSED TEACHER DECISIONS + AUXILIARY HEADS</text>
+   </g>
+   <g id="text_44">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="936.330469" transform="rotate(-0 360 936.330469)">INPUT: a, g, original classifier logits t_a and t_v</text>
+   </g>
+   <g id="text_45">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="956.490469" transform="rotate(-0 360 956.490469)">p_a = softmax(t_a); p_v = mean_time(softmax(t_v))</text>
+   </g>
+   <g id="text_46">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="976.650469" transform="rotate(-0 360 976.650469)">C_a, C_v = categorical probabilities → CORN logits [B,3]</text>
+   </g>
+   <g id="text_47">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="996.810469" transform="rotate(-0 360 996.810469)">s_k = sigmoid(teacher_residual_scale[k]); initially ≈ 0.25</text>
+   </g>
+   <g id="text_48">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1016.970469" transform="rotate(-0 360 1016.970469)">u_a = Linear(a) + s ⊙ C_a; u_v = Linear(g) + s ⊙ C_v</text>
+   </g>
+   <g id="text_49">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1037.130469" transform="rotate(-0 360 1037.130469)">OUTPUT: teacher conditionals C_a/C_v and auxiliary logits u_a/u_v</text>
+   </g>
+   <g id="text_50">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1104.130938" transform="rotate(-0 360 1104.130938)">7  RELIABILITY GATES — ONE PAIR PER BOUNDARY</text>
+   </g>
+   <g id="text_51">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1123.7925" transform="rotate(-0 360 1123.7925)">INPUT: a, V[k], auxiliary logits u_a/u_v</text>
+   </g>
+   <g id="text_52">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1143.9525" transform="rotate(-0 360 1143.9525)">r_a = sigmoid(MLP(a)); r_v[k] = sigmoid(MLP(V[k]))</text>
+   </g>
+   <g id="text_53">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1164.1475" transform="rotate(-0 360 1164.1475)">confidence = 2 × |sigmoid(u) − 0.5|</text>
+   </g>
+   <g id="text_54">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1184.2725" transform="rotate(-0 360 1184.2725)">r_eff = r × (0.25 + 0.75 × confidence)</text>
+   </g>
+   <g id="text_55">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1204.4325" transform="rotate(-0 360 1204.4325)">[w_a,w_v] = softmax_modality(log(r_eff) / 0.3)       [B,3,2]</text>
+   </g>
+   <g id="text_56">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1224.815" transform="rotate(-0 360 1224.815)">Epochs 0–2: override with [0.5,0.5]; then use learned gates</text>
+   </g>
+   <g id="text_57">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1291.330938" transform="rotate(-0 360 1291.330938)">8  BOUNDARY INTERACTION — REPEAT FOR k = 0, 1, 2</text>
+   </g>
+   <g id="text_58">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1310.9925" transform="rotate(-0 360 1310.9925)">INPUT: global audio a, boundary video V[k], gates w_a/w_v</text>
+   </g>
+   <g id="text_59">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1331.1525" transform="rotate(-0 360 1331.1525)">A_k = Linear_k(a); B_k = Linear_k(V[k])</text>
+   </g>
+   <g id="text_60">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1351.3125" transform="rotate(-0 360 1351.3125)">F_k = w_a[k] × A_k + w_v[k] × B_k</text>
+   </g>
+   <g id="text_61">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1371.5075" transform="rotate(-0 360 1371.5075)">I_k = MLP_k([F_k, |A_k − B_k|, A_k ⊙ B_k])        [B,256]</text>
+   </g>
+   <g id="text_62">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1391.855" transform="rotate(-0 360 1391.855)">Each MLP: Linear 768→256 → LayerNorm → GELU → Dropout</text>
+   </g>
+   <g id="text_63">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #42556b" x="360" y="1427.828438" transform="rotate(-0 360 1427.828438)">The same interaction features I_0, I_1, I_2 feed both decoders.</text>
+   </g>
+   <g id="text_64">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1471.330938" transform="rotate(-0 198 1471.330938)">9a  ORDINAL DECODER</text>
+   </g>
+   <g id="text_65">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1490.730469" transform="rotate(-0 198 1490.730469)">INPUT: I_k, gates, C_a/C_v</text>
+   </g>
+   <g id="text_66">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1510.890469" transform="rotate(-0 198 1510.890469)">l_k = Linear_k(I_k)</text>
+   </g>
+   <g id="text_67">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1531.050469" transform="rotate(-0 198 1531.050469)">+ s_k × (w_a[k] C_a[k]</text>
+   </g>
+   <g id="text_68">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1551.210469" transform="rotate(-0 198 1551.210469)">+ w_v[k] C_v[k])</text>
+   </g>
+   <g id="text_69">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1571.579063" transform="rotate(-0 198 1571.579063)">q = sigmoid(l) → CORN products</text>
+   </g>
+   <g id="text_70">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1591.530469" transform="rotate(-0 198 1591.530469)">p_rank [B,4] → dataset order</text>
+   </g>
+   <g id="text_71">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="198" y="1611.690469" transform="rotate(-0 198 1611.690469)">OUTPUT: log(p_ord) [B,4]</text>
+   </g>
+   <g id="text_72">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1471.330938" transform="rotate(-0 522 1471.330938)">9b  NOMINAL DECODER</text>
+   </g>
+   <g id="text_73">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1490.598047" transform="rotate(-0 522 1490.598047)">INPUT: I_0, I_1, I_2, a, g</text>
+   </g>
+   <g id="text_74">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1510.890469" transform="rotate(-0 522 1510.890469)">I_pool = mean_boundary(I)</text>
+   </g>
+   <g id="text_75">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1531.050469" transform="rotate(-0 522 1531.050469)">Concat [I_pool, a, g] → [B,768]</text>
+   </g>
+   <g id="text_76">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1551.419063" transform="rotate(-0 522 1551.419063)">Linear 768→256 → LayerNorm</text>
+   </g>
+   <g id="text_77">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1571.579063" transform="rotate(-0 522 1571.579063)">GELU → Dropout</text>
+   </g>
+   <g id="text_78">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1591.739063" transform="rotate(-0 522 1591.739063)">Linear 256→4</text>
+   </g>
+   <g id="text_79">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="522" y="1611.899063" transform="rotate(-0 522 1611.899063)">OUTPUT: n [B,4] raw logits</text>
+   </g>
+   <g id="text_80">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1708.930938" transform="rotate(-0 360 1708.930938)">10  FINAL COUPLING + PREDICTION</text>
+   </g>
+   <g id="text_81">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1728.5925" transform="rotate(-0 360 1728.5925)">z = log(p_ord) + sigmoid(nominal_residual_scale) × n</text>
+   </g>
+   <g id="text_82">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1748.7525" transform="rotate(-0 360 1748.7525)">clipwise_output = log_softmax(z)                         [B,4]</text>
+   </g>
+   <g id="text_83">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1768.9125" transform="rotate(-0 360 1768.9125)">prediction = argmax(clipwise_output)</text>
+   </g>
+   <g id="text_84">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1789.295" transform="rotate(-0 360 1789.295)">DATASET ORDER: 0 none · 1 strong · 2 medium · 3 weak</text>
+   </g>
+   <g id="text_85">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #42556b" x="360" y="1829.063125" transform="rotate(-0 360 1829.063125)">Dashed arrow: supervision during training; no labels needed at inference.</text>
+   </g>
+   <g id="text_86">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1874.530938" transform="rotate(-0 360 1874.530938)">11  TRAINING OBJECTIVE — OUTPUTS + GROUND TRUTH</text>
+   </g>
+   <g id="text_87">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1894.139063" transform="rotate(-0 360 1894.139063)">Dataset label → rank: none 0, weak 1, medium 2, strong 3</text>
+   </g>
+   <g id="text_88">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1914.299063" transform="rotate(-0 360 1914.299063)">1.0 × CORN(l, rank)</text>
+   </g>
+   <g id="text_89">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1934.250469" transform="rotate(-0 360 1934.250469)">+ 0.3 × [CORN(u_a, rank) + CORN(u_v, rank)]</text>
+   </g>
+   <g id="text_90">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1954.619063" transform="rotate(-0 360 1954.619063)">+ 0.1 × reliability loss: raw r vs detached exp(−BCE(u))</text>
+   </g>
+   <g id="text_91">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1974.570469" transform="rotate(-0 360 1974.570469)">+ 1.0 × NLL(clipwise_output, label)</text>
+   </g>
+   <g id="text_92">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="1994.730469" transform="rotate(-0 360 1994.730469)">+ 0.1 × SmoothL1(motion_score, rank/3)</text>
+   </g>
+   <g id="text_93">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2015.099063" transform="rotate(-0 360 2015.099063)">+ 0.5 × CE(nominal logits n, label)</text>
+   </g>
+   <g id="text_94">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2035.050469" transform="rotate(-0 360 2035.050469)">+ 0.3 × mean[CE(t_a, label), CE(mean_time(t_v), label)]</text>
+   </g>
+   <g id="text_95">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2055.419063" transform="rotate(-0 360 2055.419063)">CORN and reliability losses use the active conditional-task mask.</text>
+   </g>
+   <g id="text_96">
+    <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2075.579062" transform="rotate(-0 360 2075.579062)">Adam: encoder/classifiers lr 1e−5; fusion heads lr 1e−4</text>
+   </g>
+   <g id="text_97">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2155.264531" transform="rotate(-0 360 2155.264531)">12  RUN CONTROL FROM main.py</text>
+   </g>
+   <g id="text_98">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2175.215" transform="rotate(-0 360 2175.215)">Verify checkpoint split identities → initialize model → train</text>
+   </g>
+   <g id="text_99">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2195.375" transform="rotate(-0 360 2195.375)">Clean validation each epoch → save highest-accuracy checkpoint</text>
+   </g>
+   <g id="text_100">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2215.535" transform="rotate(-0 360 2215.535)">Up to 120 epochs; early stopping patience = 20</text>
+   </g>
+   <g id="text_101">
+    <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2235.695" transform="rotate(-0 360 2235.695)">Reload best → test → metrics / predictions / gate summaries</text>
+   </g>
+   <g id="text_102">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2299.330938" transform="rotate(-0 360 2299.330938)">READING THE DATA FLOW</text>
+   </g>
+   <g id="text_103">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2318.468438" transform="rotate(-0 360 2318.468438)">a, c, g, t_a/t_v, C_a/C_v are named connections reused downstream.</text>
+   </g>
+   <g id="text_104">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2338.823125" transform="rotate(-0 360 2338.823125)">Every INPUT line lists the tensors actually consumed by that block.</text>
+   </g>
+   <g id="text_105">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2358.983125" transform="rotate(-0 360 2358.983125)">Teacher logits remain trainable and participate in inference.</text>
+   </g>
+   <g id="text_106">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2379.143125" transform="rotate(-0 360 2379.143125)">Video teacher residual uses mean of probabilities; preservation uses mean logits.</text>
+   </g>
+   <g id="text_107">
+    <text style="font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #142b40" x="360" y="2399.303125" transform="rotate(-0 360 2399.303125)">Rank probabilities are BEFORE nominal correction; final output is AFTER it.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p613d78c8eb">
+   <rect x="0" y="0" width="720" height="2462.4"/>
+  </clipPath>
+ </defs>
+</svg>
