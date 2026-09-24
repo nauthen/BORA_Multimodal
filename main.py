@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-from config import experiment_name, load_artifact_upload_config, load_train_config
+from config import RELIABILITY_FUSION_TYPES, experiment_name, load_artifact_upload_config, load_train_config
 from dataset import create_dataloaders, load_splits
 from tasks import MultimodalTrainer, save_cv_summary
 from utils import set_seed
@@ -49,7 +49,7 @@ def _experiment_root(cfg, project_dir: Path) -> Path:
 def _run_holdout(cfg, root: Path) -> Dict[str, float]:
     logger.info("Starting holdout multimodal training.")
     splits = load_splits(cfg.dataset, mode="holdout")
-    if cfg.fusion.type in {"bora_fusion", "temporal_bora_fusion"}:
+    if cfg.fusion.type in RELIABILITY_FUSION_TYPES:
         validate_checkpoint_split_integrity(cfg.audio.checkpoint_path, splits, "Audio")
         validate_checkpoint_split_integrity(cfg.video.checkpoint_path, splits, "Video")
     loaders = create_dataloaders(

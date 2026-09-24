@@ -11,6 +11,9 @@ DEFAULT_IMAGE_CACHE_ROOT = "video_image_cache"
 VALID_CACHE_MODES = {"none", "ram", "disk"}
 BORA_AUDIO_BACKBONES = {"PANNS_Cnn6", "PANNS_Cnn6_DW_ECA", "TinyPANNS_ECA"}
 BORA_VIDEO_BACKBONES = {"SwinTiny", "EfficientNetB0", "MobileViTXXS"}
+# Fusion heads that reuse single-modal checkpoints as teachers and run the
+# reliability-gated training protocol (corruption, parameter groups, split checks).
+RELIABILITY_FUSION_TYPES = {"temporal_reliability_fusion"}
 
 
 class AudioFeaturesConfig(BaseModel):
@@ -67,15 +70,13 @@ class BoraConfig(BaseModel):
     video_brightness: tuple[float, float] = (0.5, 1.5)
     video_blur_sigma: tuple[float, float] = (0.1, 2.0)
     video_occlusion_ratio: tuple[float, float] = (0.1, 0.3)
-    categorical_loss_weight: float = Field(default=0.0, ge=0.0)
     motion_loss_weight: float = Field(default=0.0, ge=0.0)
-    nominal_loss_weight: float = Field(default=0.0, ge=0.0)
     teacher_preservation_weight: float = Field(default=0.0, ge=0.0)
     temporal_num_layers: int = Field(default=2, ge=1, le=6)
     temporal_num_heads: int = Field(default=4, ge=1)
     temporal_max_frames: int = Field(default=16, ge=2, le=64)
     # Ablation switch for the temporal reliability gate: "margin" modulates the
-    # learned reliability with the auxiliary boundary margin 2|sigmoid(o)-0.5|;
+    # learned reliability with the auxiliary top-1/top-2 probability margin;
     # "none" feeds the raw learned reliability to the gate.
     gate_confidence: Literal["margin", "none"] = "margin"
 
@@ -111,8 +112,7 @@ class FusionConfig(BaseModel):
         "linear_mean",
         "gated_fusion",
         "self_attention",
-        "bora_fusion",
-        "temporal_bora_fusion",
+        "temporal_reliability_fusion",
     ] = "raw_concat"
     proj_dim: int = 256
     hidden_dim: int = 256
@@ -159,44 +159,37 @@ class TrainConfig(BaseModel):
     video_features: VideoFeaturesConfig = Field(default_factory=VideoFeaturesConfig)
 
     @model_validator(mode="after")
-    def validate_bora_run(self) -> "TrainConfig":
-        if self.fusion.type not in {"bora_fusion", "temporal_bora_fusion"}:
+    def validate_reliability_fusion_run(self) -> "TrainConfig":
+        if self.fusion.type not in RELIABILITY_FUSION_TYPES:
             return self
         if self.num_classes != 4:
-            raise ValueError("BORA-Fuse requires num_classes=4.")
+            raise ValueError("Temporal reliability fusion requires num_classes=4.")
         if self.video.backbone not in BORA_VIDEO_BACKBONES:
             raise ValueError(
-                "BORA-Fuse requires video backbone "
+                "Temporal reliability fusion requires video backbone "
                 f"{', '.join(sorted(BORA_VIDEO_BACKBONES))}."
             )
         if self.audio.backbone not in BORA_AUDIO_BACKBONES:
             raise ValueError(
-                "BORA-Fuse requires audio backbone PANNS_Cnn6, "
-                "PANNS_Cnn6_DW_ECA, or TinyPANNS_ECA."
+                "Temporal reliability fusion requires audio backbone "
+                f"{', '.join(sorted(BORA_AUDIO_BACKBONES))}."
             )
         if self.evaluation_mode != "holdout" or self.dataset.split_strategy != "random_sample":
-            raise ValueError("BORA-Fuse supports random_sample holdout evaluation only.")
+            raise ValueError("Temporal reliability fusion supports random_sample holdout evaluation only.")
         if self.optimizer != "adam":
-            raise ValueError("BORA-Fuse uses Adam with encoder/head parameter groups; optimizer must be 'adam'.")
+            raise ValueError("Temporal reliability fusion uses Adam with encoder/head parameter groups; optimizer must be 'adam'.")
         if self.monitor != "accuracy":
-            raise ValueError("BORA-Fuse selects its best checkpoint by accuracy; monitor must be 'accuracy'.")
+            raise ValueError("Temporal reliability fusion selects its best checkpoint by accuracy; monitor must be 'accuracy'.")
         if not self.audio.checkpoint_path.strip() or not self.video.checkpoint_path.strip():
-            raise ValueError("BORA-Fuse requires both audio.checkpoint_path and video.checkpoint_path.")
+            raise ValueError("Temporal reliability fusion requires both audio.checkpoint_path and video.checkpoint_path.")
         if self.audio.freeze or self.video.freeze:
-            raise ValueError("BORA-Fuse fine-tunes both encoders; audio.freeze and video.freeze must be false.")
-        if self.fusion.type == "bora_fusion" and self.video_features.num_frames != 1:
-            raise ValueError("Global BORA-Fuse requires video_features.num_frames=1.")
-        if self.fusion.type == "temporal_bora_fusion":
-            if self.video_features.num_frames < 2:
-                raise ValueError("Temporal BORA-Fuse requires video_features.num_frames>=2.")
-            if self.video_features.num_frames > self.fusion.bora.temporal_max_frames:
-                raise ValueError(
-                    "video_features.num_frames cannot exceed fusion.bora.temporal_max_frames."
-                )
-            if self.fusion.proj_dim % self.fusion.bora.temporal_num_heads != 0:
-                raise ValueError(
-                    "fusion.proj_dim must be divisible by fusion.bora.temporal_num_heads."
-                )
+            raise ValueError("Temporal reliability fusion fine-tunes both encoders; audio.freeze and video.freeze must be false.")
+        if self.video_features.num_frames < 2:
+            raise ValueError("Temporal reliability fusion requires video_features.num_frames>=2.")
+        if self.video_features.num_frames > self.fusion.bora.temporal_max_frames:
+            raise ValueError("video_features.num_frames cannot exceed fusion.bora.temporal_max_frames.")
+        if self.fusion.proj_dim % self.fusion.bora.temporal_num_heads != 0:
+            raise ValueError("fusion.proj_dim must be divisible by fusion.bora.temporal_num_heads.")
         return self
 
     @classmethod
@@ -212,6 +205,6 @@ def load_train_config(path: str | Path = "config/train_config.json") -> TrainCon
 def experiment_name(cfg: TrainConfig) -> str:
     """Run name used for output directories and uploaded artifacts; ablations get a suffix."""
     name = f"{cfg.audio.backbone}_{cfg.video.backbone}_{cfg.fusion.type}"
-    if cfg.fusion.type == "temporal_bora_fusion" and cfg.fusion.bora.gate_confidence == "none":
+    if cfg.fusion.type in RELIABILITY_FUSION_TYPES and cfg.fusion.bora.gate_confidence == "none":
         name += "_noconf"
     return name

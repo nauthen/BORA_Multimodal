@@ -1,3 +1,5 @@
+> **Historical note:** this document describes the earlier CORN/ordinal Dual-Decoder Temporal BORA design, which has been removed from the code. The current architecture is described in `docs/temporal_reliability_fusion.md`.
+
 # Full pipeline — Dual-Decoder Temporal BORA-Fuse
 
 Tài liệu này mô tả đúng đường thực thi bắt đầu từ `main.py` với cấu hình hiện tại trong

@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from config import TrainConfig, experiment_name
 
 
-def _valid_bora_config() -> dict:
+def _valid_fusion_config() -> dict:
     return {
         "optimizer": "adam",
         "monitor": "accuracy",
@@ -22,27 +22,28 @@ def _valid_bora_config() -> dict:
             "checkpoint_path": "video_best.pt",
             "freeze": False,
         },
-        "fusion": {"type": "bora_fusion"},
+        "fusion": {"type": "temporal_reliability_fusion"},
+        "video_features": {"num_frames": 8},
         "dataset": {"split_strategy": "random_sample"},
     }
 
 
-def test_bora_config_accepts_locked_global_protocol() -> None:
-    config = TrainConfig.model_validate(_valid_bora_config())
-    assert config.fusion.type == "bora_fusion"
+def test_fusion_config_accepts_locked_protocol() -> None:
+    config = TrainConfig.model_validate(_valid_fusion_config())
+    assert config.fusion.type == "temporal_reliability_fusion"
     assert config.audio.backbone == "PANNS_Cnn6"
     assert config.video.backbone == "SwinTiny"
 
 
-def test_bora_config_accepts_efficientnet_video() -> None:
-    raw = _valid_bora_config()
+def test_fusion_config_accepts_efficientnet_video() -> None:
+    raw = _valid_fusion_config()
     raw["video"]["backbone"] = "EfficientNetB0"
     config = TrainConfig.model_validate(raw)
     assert config.video.backbone == "EfficientNetB0"
 
 
-def test_bora_config_accepts_mobilevit_xxs_video() -> None:
-    raw = _valid_bora_config()
+def test_fusion_config_accepts_mobilevit_xxs_video() -> None:
+    raw = _valid_fusion_config()
     raw["video"]["backbone"] = "MobileViTXXS"
     config = TrainConfig.model_validate(raw)
     assert config.video.backbone == "MobileViTXXS"
@@ -61,8 +62,8 @@ def test_bora_config_accepts_mobilevit_xxs_video() -> None:
         (("monitor",), "f1_macro"),
     ],
 )
-def test_bora_config_rejects_protocol_drift(path: tuple[str, ...], value: object) -> None:
-    raw = _valid_bora_config()
+def test_fusion_config_rejects_protocol_drift(path: tuple[str, ...], value: object) -> None:
+    raw = _valid_fusion_config()
     target = raw
     for key in path[:-1]:
         target = target[key]
@@ -71,17 +72,16 @@ def test_bora_config_rejects_protocol_drift(path: tuple[str, ...], value: object
         TrainConfig.model_validate(raw)
 
 
-def test_bora_gate_confidence_defaults_to_margin_and_names_ablation_run() -> None:
-    raw = _valid_bora_config()
-    raw["fusion"] = {"type": "temporal_bora_fusion", "proj_dim": 16, "bora": {"temporal_num_heads": 4}}
-    raw["video_features"] = {"num_frames": 8}
+def test_fusion_gate_confidence_defaults_to_margin_and_names_ablation_run() -> None:
+    raw = _valid_fusion_config()
+    raw["fusion"] = {"type": "temporal_reliability_fusion", "proj_dim": 16, "bora": {"temporal_num_heads": 4}}
     config = TrainConfig.model_validate(raw)
     assert config.fusion.bora.gate_confidence == "margin"
-    assert experiment_name(config) == "PANNS_Cnn6_SwinTiny_temporal_bora_fusion"
+    assert experiment_name(config) == "PANNS_Cnn6_SwinTiny_temporal_reliability_fusion"
 
     raw["fusion"]["bora"]["gate_confidence"] = "none"
     ablation = TrainConfig.model_validate(raw)
-    assert experiment_name(ablation) == "PANNS_Cnn6_SwinTiny_temporal_bora_fusion_noconf"
+    assert experiment_name(ablation) == "PANNS_Cnn6_SwinTiny_temporal_reliability_fusion_noconf"
 
     raw["fusion"]["bora"]["gate_confidence"] = "entropy"
     with pytest.raises(ValidationError):

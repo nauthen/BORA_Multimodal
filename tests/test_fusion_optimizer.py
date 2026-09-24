@@ -13,12 +13,12 @@ class _TinyMultimodalModel(nn.Module):
         self.fusion = nn.Linear(6, 4)
 
 
-def test_bora_optimizer_uses_scaled_encoder_and_full_head_learning_rates() -> None:
+def test_fusion_optimizer_uses_scaled_encoder_and_full_head_learning_rates() -> None:
     model = _TinyMultimodalModel()
     config = SimpleNamespace(
         learning_rate=1e-3,
         fusion=SimpleNamespace(
-            type="bora_fusion",
+            type="temporal_reliability_fusion",
             bora=SimpleNamespace(encoder_lr_scale=0.1),
         ),
     )

@@ -16,27 +16,26 @@ from sklearn import metrics as sklearn_metrics
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, precision_recall_fscore_support
 from tqdm import tqdm
 
-from config import TrainConfig
+from config import RELIABILITY_FUSION_TYPES, TrainConfig
 from dataset import save_split_files
 from models import MultimodalDeepFusionModel
 from utils.metrics import (
     CLASS_NAMES,
     compute_ordinal_metrics,
-    save_bora_gate_summary,
-    save_bora_predictions,
+    save_fusion_predictions,
+    save_gate_summary,
     save_confusion_outputs,
     save_metrics_csv,
 )
 from utils.checkpoint_integrity import validate_checkpoint_split_integrity
 from utils.corruption import corrupt_bora_batch
-from utils.ordinal import bora_loss
+from utils.losses import fusion_loss
 
 logger = logging.getLogger(__name__)
-BORA_TYPES = {"bora_fusion", "temporal_bora_fusion"}
 
 
 def _optimizer(model: MultimodalDeepFusionModel, cfg: TrainConfig):
-    if cfg.fusion.type not in BORA_TYPES:
+    if cfg.fusion.type not in RELIABILITY_FUSION_TYPES:
         params = [param for param in model.parameters() if param.requires_grad]
         return Adam(params, lr=cfg.learning_rate)
 
@@ -375,12 +374,12 @@ class MultimodalTrainer:
         self.run_name = run_name
         self.splits = splits
         self.device = torch.device(cfg.device if torch.cuda.is_available() and cfg.device == "cuda" else "cpu")
-        self.is_bora = cfg.fusion.type in BORA_TYPES
-        if self.is_bora:
+        self.is_reliability_fusion = cfg.fusion.type in RELIABILITY_FUSION_TYPES
+        if self.is_reliability_fusion:
             validate_checkpoint_split_integrity(cfg.audio.checkpoint_path, splits, "Audio")
             validate_checkpoint_split_integrity(cfg.video.checkpoint_path, splits, "Video")
         self.model = MultimodalDeepFusionModel(cfg).to(self.device)
-        self.criterion = None if self.is_bora else nn.CrossEntropyLoss()
+        self.criterion = None if self.is_reliability_fusion else nn.CrossEntropyLoss()
         self.optimizer = _optimizer(self.model, cfg)
         self.history_logger = MultimodalHistoryLogger(log_dir=self.output_dir)
         self.early_stopping = cfg.early_stopping
@@ -417,15 +416,15 @@ class MultimodalTrainer:
         epoch: int | None = None,
         collect_details: bool = False,
     ) -> Dict[str, Any]:
-        self.model.set_epoch(epoch if self.is_bora else None)
+        self.model.set_epoch(epoch if self.is_reliability_fusion else None)
         self.model.train(train)
         total_loss = 0.0
         all_true: List[int] = []
         all_pred: List[int] = []
         all_logits: List[List[float]] = []
         all_sample_keys: List[str] = []
-        bora_details: Dict[str, List[List[float]]] = {
-            "rank_probabilities": [],
+        fusion_details: Dict[str, List[List[float]]] = {
+            "class_probabilities": [],
             "audio_reliability": [],
             "video_reliability": [],
             "audio_gate_weights": [],
@@ -438,21 +437,19 @@ class MultimodalTrainer:
             waveform = batch["waveform"].to(self.device, non_blocking=True)
             video_form = batch["video_form"].to(self.device, non_blocking=True)
             target = batch["target"].to(self.device, non_blocking=True)
-            if train and self.is_bora:
+            if train and self.is_reliability_fusion:
                 waveform, video_form = corrupt_bora_batch(waveform, video_form, self.cfg.fusion.bora)
 
             with torch.set_grad_enabled(train):
                 output = self.model(waveform=waveform, video_form=video_form)
                 logits = output["clipwise_output"]
-                if self.is_bora:
-                    loss, loss_parts = bora_loss(
+                if self.is_reliability_fusion:
+                    loss, loss_parts = fusion_loss(
                         output,
                         target,
                         aux_loss_weight=self.cfg.fusion.bora.aux_loss_weight,
                         reliability_loss_weight=self.cfg.fusion.bora.reliability_loss_weight,
-                        categorical_loss_weight=self.cfg.fusion.bora.categorical_loss_weight,
                         motion_loss_weight=self.cfg.fusion.bora.motion_loss_weight,
-                        nominal_loss_weight=self.cfg.fusion.bora.nominal_loss_weight,
                         teacher_preservation_weight=self.cfg.fusion.bora.teacher_preservation_weight,
                     )
                 else:
@@ -470,21 +467,21 @@ class MultimodalTrainer:
             all_true.extend(target.detach().cpu().numpy().astype(int).tolist())
             all_pred.extend(pred.detach().cpu().numpy().astype(int).tolist())
             all_logits.extend(torch.softmax(logits.detach(), dim=1).cpu().numpy().astype(float).tolist())
-            if collect_details and self.is_bora:
+            if collect_details and self.is_reliability_fusion:
                 all_sample_keys.extend(str(key) for key in batch["sample_key"])
-                for key in bora_details:
-                    bora_details[key].extend(output[key].detach().cpu().numpy().astype(float).tolist())
+                for key in fusion_details:
+                    fusion_details[key].extend(output[key].detach().cpu().numpy().astype(float).tolist())
             if train:
                 postfix = {"Loss": f"{loss.item():.4f}"}
                 if loss_parts:
-                    postfix["Fused"] = f"{float(loss_parts['fused']):.4f}"
+                    postfix["Decision"] = f"{float(loss_parts['decision']):.4f}"
                 iterator.set_postfix(postfix)
 
         metrics = _statistics_from_outputs(all_true, all_logits, self.cfg.num_classes)
         metrics["loss"] = total_loss / max(1, len(all_true))
-        if collect_details and self.is_bora:
+        if collect_details and self.is_reliability_fusion:
             metrics["sample_keys"] = all_sample_keys
-            metrics.update({key: np.asarray(value, dtype=np.float32) for key, value in bora_details.items()})
+            metrics.update({key: np.asarray(value, dtype=np.float32) for key, value in fusion_details.items()})
         return metrics
 
     def fit(self) -> Dict[str, float]:
@@ -597,7 +594,7 @@ class MultimodalTrainer:
             "test",
             train=False,
             epoch=int(checkpoint["epoch"]),
-            collect_details=self.is_bora,
+            collect_details=self.is_reliability_fusion,
         )
         test_mAP = float(np.mean(test_metrics["average_precision"]))
         test_acc = float(np.mean(test_metrics["accuracy"]))
@@ -624,19 +621,19 @@ class MultimodalTrainer:
         }
         save_metrics_csv(result, self.output_dir / "result.csv")
         save_confusion_outputs(test_metrics["y_true"].tolist(), test_metrics["y_pred"].tolist(), self.output_dir)
-        if self.is_bora:
-            save_bora_predictions(
+        if self.is_reliability_fusion:
+            save_fusion_predictions(
                 test_metrics["sample_keys"],
                 test_metrics["y_true"],
                 test_metrics["y_pred"],
-                test_metrics["rank_probabilities"],
+                test_metrics["class_probabilities"],
                 test_metrics["audio_reliability"],
                 test_metrics["video_reliability"],
                 test_metrics["audio_gate_weights"],
                 test_metrics["video_gate_weights"],
                 self.output_dir / "predictions.csv",
             )
-            save_bora_gate_summary(
+            save_gate_summary(
                 test_metrics["y_true"],
                 test_metrics["audio_reliability"],
                 test_metrics["video_reliability"],

@@ -1,10 +1,10 @@
-"""Compare a Temporal BORA baseline run against a gate ablation run.
+"""Compare a temporal reliability fusion baseline run against a gate ablation run.
 
 Usage:
     python scripts/compare_gate_ablation.py <baseline_holdout_dir> <ablation_holdout_dir> [--out report.csv]
 
 Each directory must contain the trainer outputs ``result.csv`` and ``predictions.csv``.
-Reports outcome metrics, per-boundary gate mechanics, and an exact McNemar test
+Reports outcome metrics, per-query gate mechanics, and an exact McNemar test
 on the paired test predictions.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from scipy.stats import binomtest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils.ordinal import BOUNDARY_NAMES
+from utils.metrics import QUERY_NAMES
 
 RESULT_KEYS = (
     "test_accuracy",
@@ -48,10 +48,10 @@ def _gate_mechanics(predictions: Dict[str, Dict[str, str]]) -> List[Dict[str, fl
     rows = list(predictions.values())
     correct = np.asarray([row["true_label"] == row["predicted_label"] for row in rows])
     mechanics = []
-    for boundary in BOUNDARY_NAMES:
-        video_gate = np.asarray([float(row[f"video_gate_{boundary}"]) for row in rows])
-        audio_rel = np.asarray([float(row[f"audio_reliability_{boundary}"]) for row in rows])
-        video_rel = np.asarray([float(row[f"video_reliability_{boundary}"]) for row in rows])
+    for query in QUERY_NAMES:
+        video_gate = np.asarray([float(row[f"video_gate_{query}"]) for row in rows])
+        audio_rel = np.asarray([float(row[f"audio_reliability_{query}"]) for row in rows])
+        video_rel = np.asarray([float(row[f"video_reliability_{query}"]) for row in rows])
         low, high = DEAD_GATE_BAND
         separation = (
             abs(video_gate[correct].mean() - video_gate[~correct].mean())
@@ -60,7 +60,7 @@ def _gate_mechanics(predictions: Dict[str, Dict[str, str]]) -> List[Dict[str, fl
         )
         mechanics.append(
             {
-                "boundary": boundary,
+                "query": query,
                 "video_gate_mean": float(video_gate.mean()),
                 "video_gate_std": float(video_gate.std()),
                 "dead_gate_fraction": float(((video_gate >= low) & (video_gate <= high)).mean()),
@@ -111,10 +111,10 @@ def main() -> None:
         base, abl = results["baseline"][key], results["ablation"][key]
         print(f"{key:28s}{base:12.5f}{abl:12.5f}{abl - base:+12.5f}")
 
-    print("\n== Gate mechanics per boundary (video gate; separation = |mean correct - mean wrong|) ==")
-    fields = [key for key in mechanics["baseline"][0] if key != "boundary"]
-    for index, boundary in enumerate(BOUNDARY_NAMES):
-        print(f"\n[{boundary}]")
+    print("\n== Gate mechanics per query (video gate; separation = |mean correct - mean wrong|) ==")
+    fields = [key for key in mechanics["baseline"][0] if key != "query"]
+    for index, query in enumerate(QUERY_NAMES):
+        print(f"\n[{query}]")
         for field in fields:
             base = mechanics["baseline"][index][field]
             abl = mechanics["ablation"][index][field]
@@ -130,15 +130,15 @@ def main() -> None:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with args.out.open("w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            writer.writerow(["section", "boundary", "metric", "baseline", "ablation"])
+            writer.writerow(["section", "query", "metric", "baseline", "ablation"])
             for key in RESULT_KEYS:
                 writer.writerow(["outcome", "", key, results["baseline"][key], results["ablation"][key]])
-            for index, boundary in enumerate(BOUNDARY_NAMES):
+            for index, query in enumerate(QUERY_NAMES):
                 for field in fields:
                     writer.writerow(
                         [
                             "gate",
-                            boundary,
+                            query,
                             field,
                             mechanics["baseline"][index][field],
                             mechanics["ablation"][index][field],

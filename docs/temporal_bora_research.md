@@ -1,3 +1,5 @@
+> **Historical note:** this document describes the earlier CORN/ordinal Dual-Decoder Temporal BORA design, which has been removed from the code. The current architecture is described in `docs/temporal_reliability_fusion.md`.
+
 # Temporal BORA-Fuse research note
 
 ## Evidence and protocol audit

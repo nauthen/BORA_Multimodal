@@ -7,7 +7,7 @@ from typing import Dict, Optional
 import torch
 import torch.nn as nn
 
-from config import TrainConfig
+from config import RELIABILITY_FUSION_TYPES, TrainConfig
 from features.audio_frontend import AudioFrontend
 from models.audio import build_audio_backbone
 from models.fusion import build_fusion_head
@@ -15,7 +15,6 @@ from models.video import build_video_backbone
 from utils.checkpoint_integrity import load_wrapped_single_modal_checkpoint
 
 logger = logging.getLogger(__name__)
-BORA_TYPES = {"bora_fusion", "temporal_bora_fusion"}
 
 
 def _strict_load_checkpoint(module: nn.Module, checkpoint_path: str, prefix: str) -> None:
@@ -107,7 +106,7 @@ class MultimodalDeepFusionModel(nn.Module):
         )
         if not hasattr(audio_backbone, "fc_audioset") or not isinstance(audio_backbone.fc_audioset, nn.Linear):
             raise ValueError(f"Audio backbone '{cfg.audio.backbone}' must expose fc_audioset for feature extraction.")
-        if cfg.fusion.type in BORA_TYPES:
+        if cfg.fusion.type in RELIABILITY_FUSION_TYPES:
             load_wrapped_single_modal_checkpoint(
                 cfg.audio.checkpoint_path,
                 {"frontend": self.audio_frontend, "backbone": audio_backbone},
@@ -124,12 +123,12 @@ class MultimodalDeepFusionModel(nn.Module):
         video_backbone = build_video_backbone(
             name=cfg.video.backbone,
             classes_num=cfg.num_classes,
-            # The BORA checkpoint is a complete single-modal wrapper state. Avoid an
+            # The teacher checkpoint is a complete single-modal wrapper state. Avoid an
             # unnecessary ImageNet download before strict-loading those weights.
-            pretrained=False if cfg.fusion.type in BORA_TYPES else cfg.video.pretrained,
+            pretrained=False if cfg.fusion.type in RELIABILITY_FUSION_TYPES else cfg.video.pretrained,
         )
         classifier, video_dim = _video_classifier_and_dim(video_backbone)
-        if cfg.fusion.type in BORA_TYPES:
+        if cfg.fusion.type in RELIABILITY_FUSION_TYPES:
             load_wrapped_single_modal_checkpoint(
                 cfg.video.checkpoint_path,
                 {"backbone": video_backbone},
@@ -174,14 +173,14 @@ class MultimodalDeepFusionModel(nn.Module):
         elif video_form.ndim == 4:
             video_feat = self.video_branch(video_form)
             video_teacher_logits = self.video_branch.last_logits
-            if self.cfg.fusion.type == "temporal_bora_fusion":
+            if self.cfg.fusion.type in RELIABILITY_FUSION_TYPES:
                 video_feat = video_feat.unsqueeze(1)
                 video_teacher_logits = video_teacher_logits.unsqueeze(1)
         else:
             raise ValueError(
                 f"Expected video_form [B,C,H,W] or [B,T,C,H,W], got {video_form.shape}."
             )
-        if self.cfg.fusion.type == "temporal_bora_fusion":
+        if self.cfg.fusion.type in RELIABILITY_FUSION_TYPES:
             fusion_output = self.fusion(
                 audio_feat,
                 video_feat,

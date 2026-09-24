@@ -37,7 +37,8 @@ def test_bora_config_accepts_tiny_panns_eca() -> None:
                 "checkpoint_path": "video_best.pt",
                 "freeze": False,
             },
-            "fusion": {"type": "bora_fusion"},
+            "fusion": {"type": "temporal_reliability_fusion"},
+            "video_features": {"num_frames": 8},
             "dataset": {"split_strategy": "random_sample"},
         }
     )

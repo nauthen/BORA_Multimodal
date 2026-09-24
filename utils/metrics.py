@@ -18,10 +18,12 @@ from sklearn.metrics import (
     recall_score,
 )
 
-from utils.ordinal import BOUNDARY_NAMES, DATASET_LABEL_TO_RANK, RANK_NAMES
+from utils.ordinal import DATASET_LABEL_TO_RANK
 
 
 CLASS_NAMES = ["none", "strong", "medium", "weak"]
+# Audio-conditioned temporal attention queries of the reliability fusion head.
+QUERY_NAMES = ("q0", "q1", "q2")
 
 
 def compute_ordinal_metrics(y_true: Iterable[int], y_pred: Iterable[int]) -> Dict[str, float]:
@@ -113,11 +115,21 @@ def save_confusion_outputs(y_true: Iterable[int], y_pred: Iterable[int], output_
     plt.close()
 
 
-def save_bora_predictions(
+def _per_query(values: np.ndarray, num_rows: int) -> np.ndarray:
+    """Return [N, K] values; audio reliability is one value per sample, shared by every query."""
+    values = np.asarray(values, dtype=np.float32).reshape(num_rows, -1)
+    if values.shape[1] == 1:
+        values = np.repeat(values, len(QUERY_NAMES), axis=1)
+    if values.shape[1] != len(QUERY_NAMES):
+        raise ValueError(f"Expected {len(QUERY_NAMES)} query columns, got {values.shape[1]}.")
+    return values
+
+
+def save_fusion_predictions(
     sample_keys: List[str],
     y_true: Iterable[int],
     y_pred: Iterable[int],
-    rank_probabilities: np.ndarray,
+    class_probabilities: np.ndarray,
     audio_reliability: np.ndarray,
     video_reliability: np.ndarray,
     audio_gate_weights: np.ndarray,
@@ -127,15 +139,21 @@ def save_bora_predictions(
     true_labels = np.asarray(list(y_true), dtype=int)
     pred_labels = np.asarray(list(y_pred), dtype=int)
     label_to_rank = np.asarray(DATASET_LABEL_TO_RANK, dtype=int)
-    arrays = [rank_probabilities, audio_reliability, video_reliability, audio_gate_weights, video_gate_weights]
-    if any(array.shape[0] != len(sample_keys) for array in arrays):
-        raise ValueError("BORA prediction arrays must have one row per sample key.")
+    count = len(sample_keys)
+    per_query = {
+        "audio_reliability": _per_query(audio_reliability, count),
+        "video_reliability": _per_query(video_reliability, count),
+        "audio_gate": _per_query(audio_gate_weights, count),
+        "video_gate": _per_query(video_gate_weights, count),
+    }
+    if class_probabilities.shape != (count, len(CLASS_NAMES)):
+        raise ValueError("class_probabilities must have one row per sample key and one column per class.")
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["sample_key", "true_label", "predicted_label", "true_rank", "predicted_rank"]
-    fieldnames.extend(f"p_rank_{name}" for name in RANK_NAMES)
-    for prefix in ("audio_reliability", "video_reliability", "audio_gate", "video_gate"):
-        fieldnames.extend(f"{prefix}_{boundary}" for boundary in BOUNDARY_NAMES)
+    fieldnames.extend(f"p_class_{name}" for name in CLASS_NAMES)
+    for prefix in per_query:
+        fieldnames.extend(f"{prefix}_{query}" for query in QUERY_NAMES)
 
     with path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -148,17 +166,15 @@ def save_bora_predictions(
                 "true_rank": int(label_to_rank[true_labels[index]]),
                 "predicted_rank": int(label_to_rank[pred_labels[index]]),
             }
-            for rank_index, name in enumerate(RANK_NAMES):
-                row[f"p_rank_{name}"] = float(rank_probabilities[index, rank_index])
-            for boundary_index, boundary in enumerate(BOUNDARY_NAMES):
-                row[f"audio_reliability_{boundary}"] = float(audio_reliability[index, boundary_index])
-                row[f"video_reliability_{boundary}"] = float(video_reliability[index, boundary_index])
-                row[f"audio_gate_{boundary}"] = float(audio_gate_weights[index, boundary_index])
-                row[f"video_gate_{boundary}"] = float(video_gate_weights[index, boundary_index])
+            for class_index, name in enumerate(CLASS_NAMES):
+                row[f"p_class_{name}"] = float(class_probabilities[index, class_index])
+            for prefix, values in per_query.items():
+                for query_index, query in enumerate(QUERY_NAMES):
+                    row[f"{prefix}_{query}"] = float(values[index, query_index])
             writer.writerow(row)
 
 
-def save_bora_gate_summary(
+def save_gate_summary(
     y_true: Iterable[int],
     audio_reliability: np.ndarray,
     video_reliability: np.ndarray,
@@ -167,42 +183,32 @@ def save_bora_gate_summary(
     path: str | Path,
 ) -> None:
     true_labels = np.asarray(list(y_true), dtype=int)
-    true_ranks = np.asarray(DATASET_LABEL_TO_RANK, dtype=int)[true_labels]
+    count = len(true_labels)
+    series = {
+        "audio_gate": _per_query(audio_gate_weights, count),
+        "video_gate": _per_query(video_gate_weights, count),
+        "audio_reliability": _per_query(audio_reliability, count),
+        "video_reliability": _per_query(video_reliability, count),
+    }
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fields = [
-        "true_rank",
-        "true_rank_name",
-        "boundary",
-        "sample_count",
-        "audio_gate_mean",
-        "audio_gate_std",
-        "video_gate_mean",
-        "video_gate_std",
-        "audio_reliability_mean",
-        "audio_reliability_std",
-        "video_reliability_mean",
-        "video_reliability_std",
-    ]
+    fields = ["true_label", "true_class_name", "query", "sample_count"]
+    for name in series:
+        fields.extend([f"{name}_mean", f"{name}_std"])
     with path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=fields)
         writer.writeheader()
-        for rank, rank_name in enumerate(RANK_NAMES):
-            rank_mask = true_ranks == rank
-            for boundary_index, boundary in enumerate(BOUNDARY_NAMES):
+        for label, class_name in enumerate(CLASS_NAMES):
+            mask = true_labels == label
+            for query_index, query in enumerate(QUERY_NAMES):
                 row = {
-                    "true_rank": rank,
-                    "true_rank_name": rank_name,
-                    "boundary": boundary,
-                    "sample_count": int(rank_mask.sum()),
+                    "true_label": label,
+                    "true_class_name": class_name,
+                    "query": query,
+                    "sample_count": int(mask.sum()),
                 }
-                for name, values in (
-                    ("audio_gate", audio_gate_weights),
-                    ("video_gate", video_gate_weights),
-                    ("audio_reliability", audio_reliability),
-                    ("video_reliability", video_reliability),
-                ):
-                    selected = values[rank_mask, boundary_index]
+                for name, values in series.items():
+                    selected = values[mask, query_index]
                     row[f"{name}_mean"] = float(selected.mean()) if selected.size else float("nan")
                     row[f"{name}_std"] = float(selected.std()) if selected.size else float("nan")
                 writer.writerow(row)
