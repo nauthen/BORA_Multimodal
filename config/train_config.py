@@ -74,6 +74,10 @@ class BoraConfig(BaseModel):
     temporal_num_layers: int = Field(default=2, ge=1, le=6)
     temporal_num_heads: int = Field(default=4, ge=1)
     temporal_max_frames: int = Field(default=16, ge=2, le=64)
+    # Ablation switch for the temporal reliability gate: "margin" modulates the
+    # learned reliability with the auxiliary boundary margin 2|sigmoid(o)-0.5|;
+    # "none" feeds the raw learned reliability to the gate.
+    gate_confidence: Literal["margin", "none"] = "margin"
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "BoraConfig":
@@ -203,3 +207,11 @@ class TrainConfig(BaseModel):
 
 def load_train_config(path: str | Path = "config/train_config.json") -> TrainConfig:
     return TrainConfig.from_json(path)
+
+
+def experiment_name(cfg: TrainConfig) -> str:
+    """Run name used for output directories and uploaded artifacts; ablations get a suffix."""
+    name = f"{cfg.audio.backbone}_{cfg.video.backbone}_{cfg.fusion.type}"
+    if cfg.fusion.type == "temporal_bora_fusion" and cfg.fusion.bora.gate_confidence == "none":
+        name += "_noconf"
+    return name

@@ -375,10 +375,15 @@ class TemporalBORAFusion(nn.Module):
         # auxiliary boundary margin, an entropy-like uncertainty signal, so an
         # uncertain modality cannot dominate merely because its MLP is biased
         # high. The floor retains gradients for genuinely complementary cues.
-        audio_confidence = 2.0 * torch.abs(torch.sigmoid(audio_ordinal) - 0.5)
-        video_confidence = 2.0 * torch.abs(torch.sigmoid(video_ordinal) - 0.5)
-        audio_gate_reliability = audio_reliability * (0.25 + 0.75 * audio_confidence)
-        video_gate_reliability = video_reliability * (0.25 + 0.75 * video_confidence)
+        if self.cfg.bora.gate_confidence == "margin":
+            audio_confidence = 2.0 * torch.abs(torch.sigmoid(audio_ordinal) - 0.5)
+            video_confidence = 2.0 * torch.abs(torch.sigmoid(video_ordinal) - 0.5)
+            audio_gate_reliability = audio_reliability * (0.25 + 0.75 * audio_confidence)
+            video_gate_reliability = video_reliability * (0.25 + 0.75 * video_confidence)
+        else:
+            # Ablation: the gate sees only the raw learned reliability.
+            audio_gate_reliability = audio_reliability
+            video_gate_reliability = video_reliability
         weights = self._gate_weights(audio_gate_reliability, video_gate_reliability)
 
         boundary_logits = []

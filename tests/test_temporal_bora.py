@@ -151,3 +151,33 @@ def test_temporal_bora_config_requires_multiple_frames() -> None:
         TrainConfig.model_validate(raw)
     raw["video_features"]["num_frames"] = 8
     assert TrainConfig.model_validate(raw).video_features.num_frames == 8
+
+
+@pytest.mark.parametrize("gate_confidence", ["margin", "none"])
+def test_temporal_bora_gate_confidence_ablation(gate_confidence: str) -> None:
+    cfg = _fusion_config()
+    cfg.bora.gate_confidence = gate_confidence
+    torch.manual_seed(5)
+    head = TemporalBORAFusion(10, 12, 4, cfg)
+    head.set_epoch(3)
+    output = head(torch.randn(6, 10), torch.randn(6, 5, 12))
+
+    if gate_confidence == "none":
+        assert torch.equal(output["audio_gate_reliability"], output["audio_reliability"])
+        assert torch.equal(output["video_gate_reliability"], output["video_reliability"])
+    else:
+        assert (output["audio_gate_reliability"] <= output["audio_reliability"] + 1e-7).all()
+        assert (output["video_gate_reliability"] <= output["video_reliability"] + 1e-7).all()
+        assert not torch.equal(output["audio_gate_reliability"], output["audio_reliability"])
+
+    loss, _ = bora_loss(
+        output,
+        torch.tensor([0, 1, 2, 3, 0, 1]),
+        aux_loss_weight=0.3,
+        reliability_loss_weight=0.1,
+        nominal_loss_weight=0.5,
+    )
+    loss.backward()
+    assert head.audio_reliability_head[0].weight.grad is not None
+    assert head.video_reliability_head[0].weight.grad is not None
+    assert torch.isfinite(head.audio_reliability_head[0].weight.grad).all()

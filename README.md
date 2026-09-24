@@ -93,6 +93,29 @@ checkpoint, runs the held-out test once, and writes to
 - `predictions.csv`, `gate_summary.csv` — per-sample audit of gates,
   reliabilities and probabilities.
 
+## Ablation: margin confidence in the reliability gate
+
+`fusion.bora.gate_confidence` selects what the boundary gate sees:
+`"margin"` (default) uses `r * (0.25 + 0.75 * 2|sigmoid(o_aux) - 0.5|)`,
+`"none"` uses the raw learned reliability `r`. Everything else is unchanged.
+The ablation run is written to a separate `..._temporal_bora_fusion_noconf/`
+directory, so it never overwrites the baseline.
+
+```bash
+python main.py                                                   # baseline
+python main.py --config config/train_config.ablation_no_confidence.json
+python scripts/compare_gate_ablation.py \
+  outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion/holdout \
+  outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion_noconf/holdout \
+  --out outputs/gate_confidence_ablation.csv
+```
+
+The report gives test outcome metrics, per-boundary gate mechanics (video-gate
+mean/std, fraction of "dead" gates in [0.45, 0.55], gate separation between
+correct and wrong predictions, reliability mean/std) and an exact McNemar test
+on the paired test predictions. Use several seeds when the accuracy gap is
+below ~0.5%.
+
 ## Tests
 
 ```bash

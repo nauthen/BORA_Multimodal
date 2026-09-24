@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import argparse
 import logging
 import sys
 from pathlib import Path
 from typing import Dict, List
 
-from config import load_artifact_upload_config, load_train_config
+from config import experiment_name, load_artifact_upload_config, load_train_config
 from dataset import create_dataloaders, load_splits
 from tasks import MultimodalTrainer, save_cv_summary
 from utils import set_seed
@@ -38,7 +39,7 @@ def _log_run_configuration(cfg, root: Path) -> None:
 
 
 def _experiment_root(cfg, project_dir: Path) -> Path:
-    name = f"{cfg.audio.backbone}_{cfg.video.backbone}_{cfg.fusion.type}"
+    name = experiment_name(cfg)
     output_dir = Path(cfg.output_dir)
     if not output_dir.is_absolute():
         output_dir = project_dir / output_dir
@@ -95,9 +96,23 @@ def _run_cross_validation(cfg, root: Path) -> List[Dict[str, float]]:
     return fold_results
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Multimodal deep fusion training.")
+    parser.add_argument(
+        "--config",
+        default="config/train_config.json",
+        help="Training config path, relative to the project directory unless absolute.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     project_dir = Path(__file__).resolve().parent
-    cfg = load_train_config(project_dir / "config" / "train_config.json")
+    config_path = Path(_parse_args().config)
+    if not config_path.is_absolute():
+        config_path = project_dir / config_path
+    logger.info("Loading training config: %s", config_path)
+    cfg = load_train_config(config_path)
     set_seed(cfg.seed)
     root = _experiment_root(cfg, project_dir)
     root.mkdir(parents=True, exist_ok=True)

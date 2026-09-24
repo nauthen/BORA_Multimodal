@@ -9,17 +9,14 @@ from typing import Optional
 
 from huggingface_hub import HfApi, create_repo, get_token
 
-from config import ArtifactUploadConfig, TrainConfig
+from config import ArtifactUploadConfig, TrainConfig, experiment_name
 
 logger = logging.getLogger(__name__)
 
 
 def build_artifact_name(cfg: TrainConfig) -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return (
-        f"MultimodalDL_{cfg.audio.backbone}_{cfg.video.backbone}_"
-        f"{cfg.fusion.type}_{cfg.evaluation_mode}_{timestamp}.zip"
-    )
+    return f"MultimodalDL_{experiment_name(cfg)}_{cfg.evaluation_mode}_{timestamp}.zip"
 
 
 def zip_source_tree(source_dir: str | Path, output_zip: str | Path) -> Path:
