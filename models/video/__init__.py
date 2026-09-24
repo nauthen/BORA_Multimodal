@@ -2,6 +2,7 @@ from .convnext_tiny import ConvNeXtTiny
 from .densenet121 import DenseNet121
 from .efficientnet_b0 import EfficientNetB0
 from .mobilenet_v2 import MobileNetV2
+from .mobilevit_xxs import MobileViTXXS
 from .resnet18 import ResNet18
 from .resnet50 import ResNet50
 from .swin_tiny import SwinTiny
@@ -12,6 +13,7 @@ VIDEO_BACKBONES = {
     "EfficientNetB0": EfficientNetB0,
     "DenseNet121": DenseNet121,
     "MobileNetV2": MobileNetV2,
+    "MobileViTXXS": MobileViTXXS,
     "SwinTiny": SwinTiny,
     "ResNet18": ResNet18,
     "ResNet50": ResNet50,

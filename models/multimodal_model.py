@@ -82,6 +82,9 @@ def _video_classifier_and_dim(video_backbone: nn.Module) -> tuple[nn.Module, int
         return model.fc, int(model.fc.in_features)
     if hasattr(model, "head") and isinstance(model.head, nn.Linear):
         return model.head, int(model.head.in_features)
+    # timm ClassifierHead (e.g. MobileViT): pool -> drop -> fc; hook fc to get pooled features.
+    if hasattr(model, "head") and isinstance(getattr(model.head, "fc", None), nn.Linear):
+        return model.head.fc, int(model.head.fc.in_features)
     if hasattr(model, "heads") and hasattr(model.heads, "head") and isinstance(model.heads.head, nn.Linear):
         return model.heads.head, int(model.heads.head.in_features)
     raise ValueError(f"Cannot locate video classifier module for {video_backbone.__class__.__name__}.")

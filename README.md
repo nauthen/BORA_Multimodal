@@ -1,4 +1,4 @@
-# Multimodal Deep Fusion — Dual-Decoder Temporal BORA (PANNs Cnn6 + EfficientNetB0)
+# Multimodal Deep Fusion — Dual-Decoder Temporal BORA (PANNs Cnn6 + MobileViT-XXS)
 
 Audio-video fish feeding intensity classification (AV-FFIA, 27K two-second
 clips, 4 ordinal classes `none < weak < medium < strong`).
@@ -30,11 +30,16 @@ rate.
 - **Audio teacher checkpoint**:
   `/marimo/checkpoints/audio_run/DL_audio/checkpoint/panns_cnn6/audio_best.pt`
   with its `splits/` sidecar beside it.
-- **Video teacher checkpoint for EfficientNetB0**: train the single-modal video
-  model on the identical split first, then place it at
-  `/marimo/checkpoints/video_run/DL_video/checkpoint/efficientnet_b0/video_best.pt`
-  with a matching `splits/` sidecar. Identity/label equality across splits is
-  enforced by `validate_checkpoint_split_integrity`.
+- **Video teacher checkpoint (MobileViT-XXS, timm `mobilevit_xxs`)**: the
+  single-modal U_FFIA27K_video run
+  `MobileViTXXS_holdout_random_sample_end_20260826_030403` (test acc 0.931,
+  seed-42 random holdout, trained on the *end* frame at 224 px with ImageNet
+  normalization). Copy its whole `checkpoint/mobilevit_xxs/` folder to
+  `/marimo/checkpoints/video_run/U_FFIA27K_video/checkpoint/mobilevit_xxs/` so
+  `video_best.pt` keeps its `splits/` sidecar beside it. Identity/label
+  equality across splits is enforced by `validate_checkpoint_split_integrity`.
+  The previous EfficientNetB0 setup is kept in
+  `config/train_config.efficientnet_b0.json`.
 - Dataset root: `/marimo/Fish_Feeding_Intensity_Dataset`.
 
 ## 1. Install
@@ -43,6 +48,8 @@ rate.
 pip install -r requirements.txt
 ```
 
+MobileViT-XXS needs `timm>=0.9` (the checkpoint strict-loads with timm 1.0.x).
+
 Note: `decord` has no wheel for Python 3.13; the loader automatically falls
 back to OpenCV decoding when decord is unavailable (slower preload, identical
 sampling logic).
@@ -50,7 +57,7 @@ sampling logic).
 ## 2. Train + evaluate
 
 Edit only `config/train_config.json` (already set to
-`EfficientNetB0 + temporal_bora_fusion`, `num_frames=8`, dual-decoder losses
+`MobileViTXXS + temporal_bora_fusion`, `num_frames=8`, dual-decoder losses
 `nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`), then:
 
 To replace the PANNs Cnn6 audio branch with the Tiny PANNs + ECA checkpoint,
@@ -77,7 +84,7 @@ python main.py
 
 The trainer fits, selects the best epoch by validation accuracy, reloads that
 checkpoint, runs the held-out test once, and writes to
-`outputs/PANNS_Cnn6_EfficientNetB0_temporal_bora_fusion/holdout/`:
+`outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion/holdout/`:
 
 - `result.csv` — accuracy, mAP, rank MAE, QWK, within-one, severe-error rate;
 - `history.csv`, `learning_curves.png`, confusion outputs;

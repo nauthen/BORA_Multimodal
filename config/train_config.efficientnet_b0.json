@@ -19,10 +19,10 @@
     "checkpoint_path": "/marimo/checkpoints/audio_run/DL_audio/checkpoint/panns_cnn6/audio_best.pt"
   },
   "video": {
-    "backbone": "MobileViTXXS",
+    "backbone": "EfficientNetB0",
     "pretrained": false,
     "freeze": false,
-    "checkpoint_path": "/marimo/checkpoints/video_run/U_FFIA27K_video/checkpoint/mobilevit_xxs/video_best.pt"
+    "checkpoint_path": "/marimo/checkpoints/video_run/DL_video/checkpoint/efficientnet_b0/video_best.pt"
   },
   "fusion": {
     "type": "temporal_bora_fusion",

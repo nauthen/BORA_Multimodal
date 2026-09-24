@@ -1,4 +1,4 @@
-﻿pydantic
+pydantic
 numpy
 torch
 torchaudio
@@ -13,3 +13,4 @@ torchcodec
 matplotlib
 huggingface_hub
 pytest
+timm>=0.9

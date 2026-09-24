@@ -38,6 +38,13 @@ def test_bora_config_accepts_efficientnet_video() -> None:
     assert config.video.backbone == "EfficientNetB0"
 
 
+def test_bora_config_accepts_mobilevit_xxs_video() -> None:
+    raw = _valid_bora_config()
+    raw["video"]["backbone"] = "MobileViTXXS"
+    config = TrainConfig.model_validate(raw)
+    assert config.video.backbone == "MobileViTXXS"
+
+
 @pytest.mark.parametrize(
     ("path", "value"),
     [
