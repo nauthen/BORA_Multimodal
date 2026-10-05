@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -136,6 +136,25 @@ class DatasetConfig(BaseModel):
     test_sample_per_class: int = 700
     num_folds: int = 5
     cv_val_ratio: float = 0.2
+    # Cross-validation folds to train in this run, e.g. [3, 4] to resume after a
+    # crash; None runs every fold. The summary covers every fold found on disk.
+    cv_folds: Optional[List[int]] = None
+
+    @model_validator(mode="after")
+    def validate_cv_folds(self) -> "DatasetConfig":
+        if self.cv_folds is None:
+            return self
+        if not self.cv_folds:
+            raise ValueError("dataset.cv_folds must list at least one fold (or be null for all folds).")
+        if len(set(self.cv_folds)) != len(self.cv_folds):
+            raise ValueError(f"dataset.cv_folds has duplicates: {self.cv_folds}.")
+        invalid = [fold for fold in self.cv_folds if not 0 <= fold < self.num_folds]
+        if invalid:
+            raise ValueError(f"dataset.cv_folds {invalid} outside [0, {self.num_folds}) for num_folds={self.num_folds}.")
+        return self
+
+    def selected_folds(self) -> List[int]:
+        return list(self.cv_folds) if self.cv_folds is not None else list(range(self.num_folds))
 
 
 FOLD_PLACEHOLDER = "{fold"

@@ -683,24 +683,52 @@ class MultimodalTrainer:
         return latency_ms
 
 
-def save_cv_summary(fold_results: List[Dict[str, float]], output_dir: str | Path) -> None:
+def load_cv_fold_results(cv_dir: str | Path, num_folds: int) -> Dict[int, Dict[str, float]]:
+    """Read ``fold_XX/result.csv`` of every fold present on disk, from this or earlier runs."""
+    results: Dict[int, Dict[str, float]] = {}
+    for fold_index in range(num_folds):
+        path = Path(cv_dir) / f"fold_{fold_index:02d}" / "result.csv"
+        if path.is_file():
+            with path.open("r", newline="", encoding="utf-8") as f:
+                results[fold_index] = {key: float(value) for key, value in next(csv.DictReader(f)).items()}
+    return results
+
+
+def save_cv_summary(fold_results: Dict[int, Dict[str, float]], output_dir: str | Path, num_folds: int) -> None:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     if not fold_results:
         return
-    fieldnames = sorted(fold_results[0].keys())
+    folds = sorted(fold_results)
+    missing = [fold for fold in range(num_folds) if fold not in fold_results]
+    if missing:
+        logger.warning(
+            "Cross-validation summary covers folds %s only; missing %s. Run them (dataset.cv_folds) or unzip "
+            "their uploaded fold archives at the project root, then re-run to complete the summary.",
+            folds,
+            missing,
+        )
+    fieldnames = sorted(fold_results[folds[0]].keys())
     with (output_path / "fold_results.csv").open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["fold"] + fieldnames)
         writer.writeheader()
-        for index, row in enumerate(fold_results):
-            writer.writerow({"fold": index, **row})
+        for fold in folds:
+            writer.writerow({"fold": fold, **fold_results[fold]})
 
     summary_rows = []
     for key in fieldnames:
-        values = np.asarray([row[key] for row in fold_results], dtype=float)
-        summary_rows.append({"metric": key, "mean": float(values.mean()), "std": float(values.std(ddof=1))})
+        values = np.asarray([fold_results[fold][key] for fold in folds], dtype=float)
+        summary_rows.append(
+            {
+                "metric": key,
+                "mean": float(values.mean()),
+                "std": float(values.std(ddof=1)) if len(values) > 1 else float("nan"),
+                "n_folds": len(folds),
+                "folds": " ".join(str(fold) for fold in folds),
+            }
+        )
     with (output_path / "summary_mean_std.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["metric", "mean", "std"])
+        writer = csv.DictWriter(f, fieldnames=["metric", "mean", "std", "n_folds", "folds"])
         writer.writeheader()
         writer.writerows(summary_rows)
-    logger.info("Saved cross-validation summary to %s", output_path / "summary_mean_std.csv")
+    logger.info("Saved cross-validation summary (folds %s) to %s", folds, output_path / "summary_mean_std.csv")

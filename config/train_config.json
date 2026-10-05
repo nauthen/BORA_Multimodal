@@ -68,7 +68,8 @@
     "split_strategy": "random_sample",
     "test_sample_per_class": 700,
     "num_folds": 5,
-    "cv_val_ratio": 0.2
+    "cv_val_ratio": 0.2,
+    "cv_folds": [0, 1, 2, 3, 4]
   },
   "audio_features": {
     "sample_rate": 64000,

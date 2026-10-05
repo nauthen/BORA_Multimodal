@@ -107,11 +107,30 @@ splitter settings (seed 42, `num_folds=5`, `cv_val_ratio=0.2`). Then, in
 "video": { "cv_checkpoint_path": "/marimo/checkpoints/video_cv/fold_{fold:02d}/checkpoint/video_best.pt" }
 ```
 
-Before any training, every fold's teachers are checked against that fold's
-split (`validate_checkpoint_split_integrity`), so a missing or mismatched
+Before any training, the selected folds' teachers are checked against their
+splits (`validate_checkpoint_split_integrity`), so a missing or mismatched
 teacher fails immediately instead of at fold 3. Results go to
 `outputs/<experiment>/cross_validation/fold_XX/` plus `fold_results.csv` and
 `summary_mean_std.csv`. Holdout keeps using `checkpoint_path`.
+
+**Per-fold upload.** As soon as a fold finishes, its directory is zipped and
+pushed to the Hugging Face repo in `config/artifact_upload_config.json` as
+`MultimodalDL_<audio>_<video>_<fusion>_cross_validation_fold_XX_<timestamp>.zip`
+(retried 3 times; a failed upload is logged and training continues). The archive
+holds `outputs/<experiment>/cross_validation/fold_XX/...`, so unzipping it at the
+project root puts the fold back in place.
+
+**Choosing folds / resuming.** `"dataset": {"cv_folds": [0, 1, 2, 3, 4]}` lists
+the folds this run trains (`null` = all). If the server loses its data after,
+say, folds 0–2 were uploaded:
+
+1. unzip the uploaded `..._fold_00/01/02_*.zip` archives at the project root;
+2. set `"cv_folds": [3, 4]` and run `python main.py`.
+
+After every fold, `summary_mean_std.csv` (with `n_folds` and `folds` columns)
+and `fold_results.csv` are rebuilt from every `fold_XX/result.csv` on disk, so
+the final summary covers all five folds; a warning names any fold still
+missing.
 
 ## Tests
 
