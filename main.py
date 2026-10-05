@@ -127,8 +127,9 @@ def _run_cross_validation(cfg, root: Path, upload_cfg=None) -> Dict[int, Dict[st
             run_name=f"cross_validation_fold_{fold_index:02d}",
         )
         fold_results[fold_index] = trainer.fit()
-        # Free this fold's RAM caches, loader workers and GPU memory before the
-        # next fold builds its own; otherwise both folds' caches coexist.
+        # Free this fold's loader workers and GPU memory before the next fold. The
+        # decoded audio/video stay in the process-wide RAM cache, so later folds
+        # reuse them instead of decoding every clip again.
         del trainer, loaders, splits
         gc.collect()
         if torch.cuda.is_available():

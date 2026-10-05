@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 _DECORD_FALLBACK_WARNED = False
 
+# Decoded samples shared by every dataset in this process. Cross-validation folds
+# re-split the same clips, so each clip is decoded once per run instead of once
+# per fold, and RAM holds a single copy.
+_AUDIO_RAM_CACHE: Dict[Tuple[str, int], np.ndarray] = {}
+_VIDEO_RAM_CACHE: Dict[Tuple[str, int, int, Optional[float]], Dict[str, Any]] = {}
+
 
 def _warn_decord_fallback(video_path: str, exc: Exception) -> None:
     """Log the Decord->OpenCV fallback once instead of once per file."""
@@ -205,33 +211,46 @@ class MultimodalFishDataset(Dataset):
     def __len__(self) -> int:
         return len(self.entries)
 
-    def _preload_audio(self) -> None:
-        logger.info("Preloading %s audio samples to RAM (%d samples)...", self.split, len(self.entries))
+    def _audio_key(self, entry: Dict[str, Any]) -> Tuple[str, int]:
+        return (entry["audio_path"], self.sample_rate)
 
-        def load_one(index_entry: Tuple[int, Dict[str, Any]]) -> Tuple[int, np.ndarray]:
-            index, entry = index_entry
+    def _video_key(self, entry: Dict[str, Any]) -> Tuple[str, int, int, Optional[float]]:
+        return (entry["video_path"], self.image_size, self.num_frames, self.temporal_offset)
+
+    def _preload_audio(self) -> None:
+        keys = [self._audio_key(entry) for entry in self.entries]
+        missing = [(key, entry) for key, entry in zip(keys, self.entries) if key not in _AUDIO_RAM_CACHE]
+        logger.info(
+            "Preloading %s audio to RAM: %d samples, %d already cached, %d to decode.",
+            self.split,
+            len(keys),
+            len(keys) - len(missing),
+            len(missing),
+        )
+
+        def load_one(key_entry: Tuple[Tuple[str, int], Dict[str, Any]]) -> Tuple[Tuple[str, int], np.ndarray]:
+            key, entry = key_entry
             waveform = FishVoiceDataLoader.load_audio(entry["audio_path"], sr=self.sample_rate)
             waveform = waveform.squeeze(0) if waveform.ndim > 1 else waveform
-            return index, waveform.numpy()
+            return key, waveform.numpy()
 
-        cache: List[Optional[np.ndarray]] = [None] * len(self.entries)
-        total_bytes = 0
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.preload_workers) as executor:
-            futures = {executor.submit(load_one, item): item[0] for item in enumerate(self.entries)}
-            iterator = concurrent.futures.as_completed(futures)
-            try:
-                from tqdm import tqdm
+        if missing:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.preload_workers) as executor:
+                futures = [executor.submit(load_one, item) for item in missing]
+                iterator = concurrent.futures.as_completed(futures)
+                try:
+                    from tqdm import tqdm
 
-                iterator = tqdm(iterator, total=len(futures), desc=f"Preloading {self.split} audio to RAM")
-            except ImportError:
-                pass
-            for future in iterator:
-                index, waveform_np = future.result()
-                cache[index] = waveform_np
-                total_bytes += waveform_np.nbytes
+                    iterator = tqdm(iterator, total=len(futures), desc=f"Preloading {self.split} audio to RAM")
+                except ImportError:
+                    pass
+                for future in iterator:
+                    key, waveform_np = future.result()
+                    _AUDIO_RAM_CACHE[key] = waveform_np
 
-        self.audio_cache = [item for item in cache if item is not None]
-        logger.info("Cached %s audio to RAM: %.1f MB", self.split, total_bytes / (1024**2))
+        self.audio_cache = [_AUDIO_RAM_CACHE[key] for key in keys]
+        total_bytes = sum(waveform.nbytes for waveform in self.audio_cache)
+        logger.info("Cached %s audio in RAM: %.1f MB", self.split, total_bytes / (1024**2))
 
     def _decode_video(self, video_path: str, label: int) -> Dict[str, Any]:
         if self.num_frames > 1:
@@ -259,36 +278,39 @@ class MultimodalFishDataset(Dataset):
             return _decode_center_image_cv2(video_path=video_path, label=label, image_size=self.image_size)
 
     def _preload_video(self) -> None:
+        keys = [self._video_key(entry) for entry in self.entries]
+        missing = [(key, entry) for key, entry in zip(keys, self.entries) if key not in _VIDEO_RAM_CACHE]
         logger.info(
-            "Preloading %s video samples to RAM (%d samples, %d frame(s) each)...",
+            "Preloading %s video to RAM (%d frame(s) each): %d samples, %d already cached, %d to decode.",
             self.split,
-            len(self.entries),
             self.num_frames,
+            len(keys),
+            len(keys) - len(missing),
+            len(missing),
         )
 
-        def load_one(index_entry: Tuple[int, Dict[str, Any]]) -> Tuple[int, Dict[str, Any]]:
-            index, entry = index_entry
-            return index, self._decode_video(entry["video_path"], int(entry["label"]))
+        def load_one(key_entry: Tuple[Tuple[str, int, int, Optional[float]], Dict[str, Any]]):
+            key, entry = key_entry
+            return key, self._decode_video(entry["video_path"], int(entry["label"]))
 
-        cache: List[Optional[Dict[str, Any]]] = [None] * len(self.entries)
-        total_bytes = 0
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.preload_workers) as executor:
-            futures = {executor.submit(load_one, item): item[0] for item in enumerate(self.entries)}
-            iterator = concurrent.futures.as_completed(futures)
-            try:
-                from tqdm import tqdm
+        if missing:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.preload_workers) as executor:
+                futures = [executor.submit(load_one, item) for item in missing]
+                iterator = concurrent.futures.as_completed(futures)
+                try:
+                    from tqdm import tqdm
 
-                iterator = tqdm(iterator, total=len(futures), desc=f"Preloading {self.split} video to RAM")
-            except ImportError:
-                pass
-            for future in iterator:
-                index, sample = future.result()
-                cache[index] = sample
-                video_array = sample["image_form"] if self.num_frames == 1 else sample["clip_form"]
-                total_bytes += video_array.nbytes
+                    iterator = tqdm(iterator, total=len(futures), desc=f"Preloading {self.split} video to RAM")
+                except ImportError:
+                    pass
+                for future in iterator:
+                    key, sample = future.result()
+                    _VIDEO_RAM_CACHE[key] = sample
 
-        self.video_cache = [item for item in cache if item is not None]
-        logger.info("Cached %s video frames to RAM: %.1f MB", self.split, total_bytes / (1024**2))
+        self.video_cache = [_VIDEO_RAM_CACHE[key] for key in keys]
+        array_key = "image_form" if self.num_frames == 1 else "clip_form"
+        total_bytes = sum(sample[array_key].nbytes for sample in self.video_cache)
+        logger.info("Cached %s video frames in RAM: %.1f MB", self.split, total_bytes / (1024**2))
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
         entry = self.entries[index]
