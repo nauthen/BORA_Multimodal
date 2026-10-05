@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from config import TrainConfig, experiment_name
+from config import ABLATIONS, TrainConfig, experiment_name, fold_config, load_train_config
 
 
 def _valid_bora_config() -> dict:
@@ -56,7 +56,6 @@ def test_bora_config_accepts_mobilevit_xxs_video() -> None:
         (("audio", "freeze"), True),
         (("video", "backbone"), "ResNet18"),
         (("dataset", "split_strategy"), "group_random"),
-        (("evaluation_mode",), "cross_validation"),
         (("optimizer",), "adamw"),
         (("monitor",), "f1_macro"),
     ],
@@ -71,27 +70,128 @@ def test_bora_config_rejects_protocol_drift(path: tuple[str, ...], value: object
         TrainConfig.model_validate(raw)
 
 
-def test_bora_gate_confidence_defaults_to_margin_and_names_ablation_run() -> None:
+def _valid_temporal_config() -> dict:
     raw = _valid_bora_config()
-    raw["fusion"] = {"type": "temporal_bora_fusion", "proj_dim": 16, "bora": {"temporal_num_heads": 4}}
-    raw["video_features"] = {"num_frames": 8}
-    config = TrainConfig.model_validate(raw)
-    assert config.fusion.bora.gate_confidence == "margin"
+    raw["fusion"] = {
+        "type": "temporal_bora_fusion",
+        "proj_dim": 16,
+        "bora": {"temporal_num_heads": 4, "categorical_loss_weight": 1.0, "motion_loss_weight": 0.1, "nominal_loss_weight": 0.5},
+    }
+    raw["video_features"] = {"num_frames": 2}
+    return raw
+
+
+def _write_config(tmp_path: Path, raw: dict) -> Path:
+    path = tmp_path / "train_config.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    return path
+
+
+def test_temporal_bora_defaults_to_full_model() -> None:
+    config = TrainConfig.model_validate(_valid_temporal_config())
+    bora = config.fusion.bora
+    assert (bora.gate_confidence, bora.temporal_motion, bora.decoders) == ("margin", "explicit", "dual")
     assert experiment_name(config) == "PANNS_Cnn6_SwinTiny_temporal_bora_fusion"
 
-    raw["fusion"]["bora"]["gate_confidence"] = "none"
-    ablation = TrainConfig.model_validate(raw)
-    assert experiment_name(ablation) == "PANNS_Cnn6_SwinTiny_temporal_bora_fusion_noconf"
 
-    raw["fusion"]["bora"]["gate_confidence"] = "entropy"
+@pytest.mark.parametrize(
+    ("ablation", "suffix"),
+    [
+        ("no_motion", "_nomotion"),
+        ("no_confidence", "_noconf"),
+        ("ordinal_only", "_ordinalonly"),
+        ("nominal_only", "_nominalonly"),
+    ],
+)
+def test_ablation_preset_changes_only_its_component(tmp_path: Path, ablation: str, suffix: str) -> None:
+    path = _write_config(tmp_path, _valid_temporal_config())
+    baseline = load_train_config(path)
+    variant = load_train_config(path, ablation=ablation)
+    assert experiment_name(variant) == experiment_name(baseline) + suffix
+
+    baseline_bora = baseline.fusion.bora.model_dump()
+    variant_bora = variant.fusion.bora.model_dump()
+    changed = {key for key in baseline_bora if baseline_bora[key] != variant_bora[key]}
+    assert changed == set(ABLATIONS[ablation])
+    assert {key: variant_bora[key] for key in changed} == ABLATIONS[ablation]
+    assert variant.model_dump(exclude={"fusion"}) == baseline.model_dump(exclude={"fusion"})
+    assert load_train_config(path, ablation="none") == baseline
+
+
+def test_load_train_config_rejects_unknown_ablation(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="Unknown ablation"):
+        load_train_config(_write_config(tmp_path, _valid_temporal_config()), ablation="no_transformer")
+
+
+@pytest.mark.parametrize(
+    "bora",
+    [
+        {"temporal_motion": "none", "motion_loss_weight": 0.1},
+        {"decoders": "ordinal", "nominal_loss_weight": 0.5},
+        {"decoders": "nominal", "nominal_loss_weight": 0.5},
+        {"decoders": "nominal", "nominal_loss_weight": 0.0, "categorical_loss_weight": 0.0},
+        {"gate_confidence": "entropy"},
+    ],
+)
+def test_ablation_rejects_inconsistent_settings(bora: dict) -> None:
+    raw = _valid_temporal_config()
+    raw["fusion"]["bora"].update(bora)
     with pytest.raises(ValidationError):
         TrainConfig.model_validate(raw)
 
 
-def test_ablation_config_file_differs_from_main_only_in_gate_confidence() -> None:
+@pytest.mark.parametrize(
+    "bora",
+    [{"gate_confidence": "none"}, {"temporal_motion": "none"}, {"decoders": "ordinal"}],
+)
+def test_ablation_switches_require_temporal_fusion(bora: dict) -> None:
+    raw = _valid_bora_config()
+    raw["fusion"]["bora"] = bora
+    with pytest.raises(ValidationError, match="temporal_bora_fusion only"):
+        TrainConfig.model_validate(raw)
+
+
+def test_cross_validation_requires_one_teacher_per_fold() -> None:
+    raw = _valid_temporal_config()
+    raw["evaluation_mode"] = "cross_validation"
+    with pytest.raises(ValidationError, match="one audio teacher per fold"):
+        TrainConfig.model_validate(raw)
+
+    raw["audio"]["cv_checkpoint_path"] = "cv/audio/fold_{fold:02d}/audio_best.pt"
+    raw["video"]["cv_checkpoint_path"] = "cv/video/video_best.pt"
+    with pytest.raises(ValidationError, match="one video teacher per fold"):
+        TrainConfig.model_validate(raw)
+
+    raw["video"]["cv_checkpoint_path"] = "cv/video/fold_{fold}/{run}/video_best.pt"
+    with pytest.raises(ValidationError, match="not a valid fold template"):
+        TrainConfig.model_validate(raw)
+
+    raw["video"]["cv_checkpoint_path"] = "cv/video/fold_{fold}/video_best.pt"
+    config = TrainConfig.model_validate(raw)
+    fold = fold_config(config, 3)
+    assert fold.audio.checkpoint_path == "cv/audio/fold_03/audio_best.pt"
+    assert fold.video.checkpoint_path == "cv/video/fold_3/video_best.pt"
+    assert config.audio.checkpoint_path == "audio_best.pt"
+
+
+def test_holdout_rejects_fold_template_as_teacher() -> None:
+    raw = _valid_temporal_config()
+    raw["audio"]["checkpoint_path"] = "cv/audio/fold_{fold}/audio_best.pt"
+    with pytest.raises(ValidationError, match="holdout needs one fixed teacher"):
+        TrainConfig.model_validate(raw)
+
+
+@pytest.mark.parametrize("ablation", ["none", *ABLATIONS])
+def test_repository_config_supports_every_ablation_in_both_modes(tmp_path: Path, ablation: str) -> None:
     root = Path(__file__).resolve().parent.parent / "config"
-    main = json.loads((root / "train_config.json").read_text(encoding="utf-8"))
-    ablation = json.loads((root / "train_config.ablation_no_confidence.json").read_text(encoding="utf-8"))
-    assert ablation["fusion"]["bora"].pop("gate_confidence") == "none"
-    main["fusion"]["bora"].pop("gate_confidence", None)
-    assert ablation == main
+    raw = json.loads((root / "train_config.json").read_text(encoding="utf-8"))
+    holdout = load_train_config(root / "train_config.json", evaluation_mode="holdout", ablation=ablation)
+    assert holdout.evaluation_mode == "holdout"
+
+    raw["audio"]["cv_checkpoint_path"] = "/cv/audio/fold_{fold:02d}/audio_best.pt"
+    raw["video"]["cv_checkpoint_path"] = "/cv/video/fold_{fold:02d}/video_best.pt"
+    cross_validation = load_train_config(
+        _write_config(tmp_path, raw), evaluation_mode="cross_validation", ablation=ablation
+    )
+    assert cross_validation.evaluation_mode == "cross_validation"
+    assert experiment_name(cross_validation) == experiment_name(holdout)

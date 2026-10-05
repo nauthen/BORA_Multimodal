@@ -1,5 +1,6 @@
 from .artifact_upload_config import ArtifactUploadConfig, load_artifact_upload_config
 from .train_config import (
+    ABLATIONS,
     AudioFeaturesConfig,
     BoraConfig,
     DatasetConfig,
@@ -11,10 +12,12 @@ from .train_config import (
     DEFAULT_IMAGE_CACHE_ROOT,
     VALID_CACHE_MODES,
     experiment_name,
+    fold_config,
     load_train_config,
 )
 
 __all__ = [
+    "ABLATIONS",
     "ArtifactUploadConfig",
     "AudioFeaturesConfig",
     "BoraConfig",
@@ -27,6 +30,7 @@ __all__ = [
     "DEFAULT_IMAGE_CACHE_ROOT",
     "VALID_CACHE_MODES",
     "experiment_name",
+    "fold_config",
     "load_artifact_upload_config",
     "load_train_config",
 ]

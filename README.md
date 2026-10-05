@@ -1,10 +1,11 @@
-# Multimodal Deep Fusion — Dual-Decoder Temporal BORA (PANNs Cnn6 + MobileViT-XXS)
+# Multimodal Deep Fusion — Dual-Decoder Temporal BORA (TinyPANNs-ECA + MobileViT-XXS)
 
 Audio-video fish feeding intensity classification (AV-FFIA, 27K two-second
 clips, 4 ordinal classes `none < weak < medium < strong`).
 
-Architecture under study: **Dual-Decoder Temporal BORA-Fuse** — an 8-frame,
-motion-aware, boundary-conditioned temporal fusion with two coupled decoders:
+Architecture under study: **Dual-Decoder Temporal BORA-Fuse** — a multi-frame
+(baseline: 2 frames), motion-aware, boundary-conditioned temporal fusion with
+two coupled decoders:
 
 - **Ordinal decoder (CORN)** — three conditional boundaries with per-boundary
   temporal queries, uncertainty-calibrated reliability gates, and teacher
@@ -27,9 +28,11 @@ rate.
 
 - Same seed-42 random holdout as all previous runs
   (21,467 / 2,800 / 2,800), generated automatically by `FishDataSplitter`.
-- **Audio teacher checkpoint**:
-  `/marimo/checkpoints/audio_run/DL_audio/checkpoint/panns_cnn6/audio_best.pt`
-  with its `splits/` sidecar beside it.
+- **Audio teacher checkpoint (TinyPANNS_ECA)**: the path in
+  `config/train_config.json`
+  (`/marimo/checkpoints/audio_run/DL_audio/checkpoint/panns_cnn6/audio_best.pt`,
+  which held the TinyPANNS_ECA teacher for the baseline run) with its `splits/`
+  sidecar beside it.
 - **Video teacher checkpoint (MobileViT-XXS, timm `mobilevit_xxs`)**: the
   single-modal U_FFIA27K_video run
   `MobileViTXXS_holdout_random_sample_end_20260826_030403` (test acc 0.931,
@@ -56,35 +59,27 @@ sampling logic).
 
 ## 2. Train + evaluate
 
-Edit only `config/train_config.json` (already set to
-`MobileViTXXS + temporal_bora_fusion`, `num_frames=8`, dual-decoder losses
-`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`), then:
+`config/train_config.json` is the baseline of run
+`MultimodalDL_TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion_holdout_20260924_172932`
+(test acc 0.9682): `TinyPANNS_ECA + MobileViTXXS + temporal_bora_fusion`,
+`num_frames=2`, `epochs=200`, `patience=200`, dual-decoder losses
+`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`. Then:
 
-To replace the PANNs Cnn6 audio branch with the Tiny PANNs + ECA checkpoint,
-change only the audio block (leave the audio-feature settings identical to the
-single-modal training run):
-
-```json
-"audio": {
-  "backbone": "TinyPANNS_ECA",
-  "pretrained": false,
-  "freeze": false,
-  "checkpoint_path": "/path/to/tiny_panns_eca/audio_best.pt"
-}
+```bash
+python main.py                                       # holdout (evaluation_mode in the config)
+python main.py --evaluation-mode cross_validation    # see "Cross-validation" below
 ```
 
-Both global and temporal BORA accept `TinyPANNS_ECA`. Their audio checkpoint
-loader remains strict and expects the single-modal wrapper keys
+To use the PANNs Cnn6 audio branch instead, change only the audio block
+(`"backbone": "PANNS_Cnn6"` and its checkpoint). Both global and temporal BORA
+accept `PANNS_Cnn6`, `PANNS_Cnn6_DW_ECA` and `TinyPANNS_ECA`; the audio
+checkpoint loader is strict and expects the single-modal wrapper keys
 `frontend.*` and `backbone.*`, preventing a silently partial or wrong-model
 load.
 
-```bash
-python main.py
-```
-
 The trainer fits, selects the best epoch by validation accuracy, reloads that
 checkpoint, runs the held-out test once, and writes to
-`outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion/holdout/`:
+`outputs/TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion/holdout/`:
 
 - `result.csv` — accuracy, mAP, rank MAE, QWK, within-one, severe-error rate;
 - `history.csv`, `learning_curves.png`, confusion outputs;
@@ -93,28 +88,66 @@ checkpoint, runs the held-out test once, and writes to
 - `predictions.csv`, `gate_summary.csv` — per-sample audit of gates,
   reliabilities and probabilities.
 
-## Ablation: margin confidence in the reliability gate
+## Ablations
 
-`fusion.bora.gate_confidence` selects what the boundary gate sees:
-`"margin"` (default) uses `r * (0.25 + 0.75 * 2|sigmoid(o_aux) - 0.5|)`,
-`"none"` uses the raw learned reliability `r`. Everything else is unchanged.
-The ablation run is written to a separate `..._temporal_bora_fusion_noconf/`
-directory, so it never overwrites the baseline.
+Leave-one-component-out: `--ablation <preset>` applies a preset on top of the
+config, so each variant differs from the full model only by the removed
+component and the loss attached to it. Design rationale, what each row
+measures, and how to interpret it: `docs/ablation_design.md`.
+
+| `--ablation` | Config switches | Removes | Output suffix |
+|---|---|---|---|
+| `none` | — | nothing (full model) | — |
+| `no_motion` | `temporal_motion="none"`, `motion_loss_weight=0` | frame-difference cue in tokens and event gate, motion regressor + loss | `_nomotion` |
+| `no_confidence` | `gate_confidence="none"` | margin calibration of the reliability gate | `_noconf` |
+| `ordinal_only` | `decoders="ordinal"`, `nominal_loss_weight=0` | nominal decoder (decoder 2) + coupling | `_ordinalonly` |
+| `nominal_only` | `decoders="nominal"`, `nominal_loss_weight=0` | ordinal CORN decoder (decoder 1) + its loss | `_nominalonly` |
 
 ```bash
-python main.py                                                   # baseline
-python main.py --config config/train_config.ablation_no_confidence.json
-python scripts/compare_gate_ablation.py \
-  outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion/holdout \
-  outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion_noconf/holdout \
-  --out outputs/gate_confidence_ablation.csv
+bash scripts/run_ablations.sh holdout                  # full model + 4 ablations
+bash scripts/run_ablations.sh holdout no_motion        # selected variants only
+python main.py --ablation ordinal_only                 # one variant
+python scripts/summarize_ablations.py --out outputs/ablation_summary.csv
+python scripts/compare_ablation.py \
+  outputs/TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion/holdout \
+  outputs/TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion_noconf/holdout \
+  --out outputs/no_confidence_vs_full.csv
 ```
 
-The report gives test outcome metrics, per-boundary gate mechanics (video-gate
-mean/std, fraction of "dead" gates in [0.45, 0.55], gate separation between
-correct and wrong predictions, reliability mean/std) and an exact McNemar test
-on the paired test predictions. Use several seeds when the accuracy gap is
-below ~0.5%.
+`summarize_ablations.py` prints every test metric (holdout and, when present,
+cross-validation mean ± std) with its difference from the full model.
+`compare_ablation.py` gives outcome metrics, per-boundary gate mechanics
+(video-gate mean/std, fraction of "dead" gates in [0.45, 0.55], gate separation
+between correct and wrong predictions, reliability mean/std) and an exact
+McNemar test on the paired test predictions. Re-run the full model with the
+same code (`none` is included in `run_ablations.sh`); this overwrites
+`outputs/<baseline>/holdout`. Accuracy gaps below ~0.5% need McNemar and ideally
+cross-validation or several seeds.
+
+## Cross-validation
+
+BORA cross-validation needs **one teacher per fold**: a holdout teacher was
+trained on most of every CV test fold, which would leak test labels. Train the
+single-modal audio and video teachers in cross-validation mode with the same
+splitter settings (seed 42, `num_folds=5`, `cv_val_ratio=0.2`), then point the
+config at them with a `{fold}` template (each checkpoint keeps its `splits/`
+sidecar beside it):
+
+```json
+"audio": { "cv_checkpoint_path": "/marimo/checkpoints/audio_cv/fold_{fold:02d}/checkpoint/audio_best.pt" },
+"video": { "cv_checkpoint_path": "/marimo/checkpoints/video_cv/fold_{fold:02d}/checkpoint/video_best.pt" }
+```
+
+```bash
+python main.py --evaluation-mode cross_validation
+bash scripts/run_ablations.sh cross_validation
+```
+
+Before any training, every fold's teachers are checked against that fold's
+split (`validate_checkpoint_split_integrity`), so a missing or mismatched
+teacher fails immediately instead of at fold 3. Results go to
+`outputs/<experiment>/cross_validation/fold_XX/` plus `fold_results.csv` and
+`summary_mean_std.csv`. Holdout keeps using `checkpoint_path`.
 
 ## Tests
 
@@ -125,9 +158,11 @@ pytest -q
 Covers config validation, CORN ordinal utilities, temporal views/transforms,
 fusion forward shapes, warmup + adaptive gates, gradient flow to both encoders
 and teacher residual, the nominal decoder and its coupling gate, both new loss
-terms, corruption augmentation, optimizer parameter groups, and
-checkpoint/split integrity.
+terms, corruption augmentation, optimizer parameter groups,
+checkpoint/split integrity, every ablation variant (modules, outputs, losses,
+unchanged full-model construction order), ablation presets, and per-fold
+teacher resolution in cross-validation.
 
-The `scripts/` directory retains optional analysis utilities (snapshot
-probability caching, ensemble evaluation); none of them are part of the
-reported result path.
+Besides the ablation tools above, `scripts/` retains optional analysis
+utilities (snapshot probability caching, ensemble evaluation); none of them are
+part of the reported result path.

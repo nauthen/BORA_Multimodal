@@ -1,7 +1,7 @@
-"""Compare a Temporal BORA baseline run against a gate ablation run.
+"""Compare a Temporal BORA baseline run against one ablation run on the same test split.
 
 Usage:
-    python scripts/compare_gate_ablation.py <baseline_holdout_dir> <ablation_holdout_dir> [--out report.csv]
+    python scripts/compare_ablation.py <baseline_holdout_dir> <ablation_holdout_dir> [--out report.csv]
 
 Each directory must contain the trainer outputs ``result.csv`` and ``predictions.csv``.
 Reports outcome metrics, per-boundary gate mechanics, and an exact McNemar test

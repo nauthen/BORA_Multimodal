@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -51,6 +51,11 @@ class ModalityConfig(BaseModel):
     pretrained: bool = False
     freeze: bool = False
     checkpoint_path: str = ""
+    # Cross-validation teacher template with a {fold} placeholder, e.g.
+    # ".../fold_{fold:02d}/checkpoint/audio_best.pt" (splits/ sidecar beside it).
+    # BORA cross-validation needs one teacher per fold: a holdout teacher was
+    # trained on most of every CV test fold.
+    cv_checkpoint_path: str = ""
 
 
 class BoraConfig(BaseModel):
@@ -78,6 +83,13 @@ class BoraConfig(BaseModel):
     # learned reliability with the auxiliary boundary margin 2|sigmoid(o)-0.5|;
     # "none" feeds the raw learned reliability to the gate.
     gate_confidence: Literal["margin", "none"] = "margin"
+    # Ablation switch for the explicit frame-difference cue: "explicit" adds the
+    # projected |v_t - v_(t-1)| to the temporal tokens and the event gate and
+    # trains the motion regressor; "none" removes all three.
+    temporal_motion: Literal["explicit", "none"] = "explicit"
+    # Ablation switch for the decoders: "dual" couples the ordinal (CORN) and
+    # nominal decoders; "ordinal" or "nominal" keeps only that decoder.
+    decoders: Literal["dual", "ordinal", "nominal"] = "dual"
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "BoraConfig":
@@ -137,6 +149,53 @@ class DatasetConfig(BaseModel):
     cv_val_ratio: float = 0.2
 
 
+FOLD_PLACEHOLDER = "{fold"
+
+
+def _validate_teacher_paths(name: str, modality: ModalityConfig, evaluation_mode: str) -> None:
+    if evaluation_mode == "holdout":
+        if not modality.checkpoint_path.strip():
+            raise ValueError(f"BORA-Fuse requires {name}.checkpoint_path.")
+        if FOLD_PLACEHOLDER in modality.checkpoint_path:
+            raise ValueError(
+                f"{name}.checkpoint_path contains a fold placeholder; holdout needs one fixed teacher "
+                f"checkpoint (per-fold templates belong in {name}.cv_checkpoint_path)."
+            )
+        return
+    template = modality.cv_checkpoint_path.strip()
+    if FOLD_PLACEHOLDER not in template:
+        raise ValueError(
+            f"BORA-Fuse cross-validation needs one {name} teacher per fold: set {name}.cv_checkpoint_path "
+            "to a template containing {fold}, e.g. '.../fold_{fold:02d}/checkpoint/" + name + "_best.pt'. "
+            "A holdout teacher was trained on most of every cross-validation test fold."
+        )
+    try:
+        template.format(fold=0)
+    except (IndexError, KeyError, ValueError) as exc:
+        raise ValueError(f"{name}.cv_checkpoint_path is not a valid fold template: {template!r} ({exc}).") from exc
+
+
+def _validate_ablation(fusion: FusionConfig) -> None:
+    bora = fusion.bora
+    is_ablation = (
+        bora.gate_confidence != "margin" or bora.temporal_motion != "explicit" or bora.decoders != "dual"
+    )
+    if is_ablation and fusion.type != "temporal_bora_fusion":
+        raise ValueError(
+            "gate_confidence, temporal_motion and decoders ablations apply to temporal_bora_fusion only."
+        )
+    if bora.temporal_motion == "none" and bora.motion_loss_weight != 0.0:
+        raise ValueError("temporal_motion='none' removes the motion regressor; motion_loss_weight must be 0.")
+    if bora.decoders != "dual" and bora.nominal_loss_weight != 0.0:
+        raise ValueError(
+            f"decoders='{bora.decoders}' requires nominal_loss_weight=0: an ordinal-only model has no "
+            "nominal decoder, and in a nominal-only model categorical_loss already supervises the "
+            "nominal logits."
+        )
+    if bora.decoders == "nominal" and bora.categorical_loss_weight <= 0.0:
+        raise ValueError("decoders='nominal' is trained through categorical_loss; categorical_loss_weight must be > 0.")
+
+
 class TrainConfig(BaseModel):
     seed: int = 42
     device: str = "cuda"
@@ -174,14 +233,14 @@ class TrainConfig(BaseModel):
                 "BORA-Fuse requires audio backbone PANNS_Cnn6, "
                 "PANNS_Cnn6_DW_ECA, or TinyPANNS_ECA."
             )
-        if self.evaluation_mode != "holdout" or self.dataset.split_strategy != "random_sample":
-            raise ValueError("BORA-Fuse supports random_sample holdout evaluation only.")
+        if self.dataset.split_strategy != "random_sample":
+            raise ValueError("BORA-Fuse supports the random_sample split strategy only.")
         if self.optimizer != "adam":
             raise ValueError("BORA-Fuse uses Adam with encoder/head parameter groups; optimizer must be 'adam'.")
         if self.monitor != "accuracy":
             raise ValueError("BORA-Fuse selects its best checkpoint by accuracy; monitor must be 'accuracy'.")
-        if not self.audio.checkpoint_path.strip() or not self.video.checkpoint_path.strip():
-            raise ValueError("BORA-Fuse requires both audio.checkpoint_path and video.checkpoint_path.")
+        for name, modality in (("audio", self.audio), ("video", self.video)):
+            _validate_teacher_paths(name, modality, self.evaluation_mode)
         if self.audio.freeze or self.video.freeze:
             raise ValueError("BORA-Fuse fine-tunes both encoders; audio.freeze and video.freeze must be false.")
         if self.fusion.type == "bora_fusion" and self.video_features.num_frames != 1:
@@ -197,6 +256,7 @@ class TrainConfig(BaseModel):
                 raise ValueError(
                     "fusion.proj_dim must be divisible by fusion.bora.temporal_num_heads."
                 )
+        _validate_ablation(self.fusion)
         return self
 
     @classmethod
@@ -205,13 +265,53 @@ class TrainConfig(BaseModel):
             return cls.model_validate(json.load(f))
 
 
-def load_train_config(path: str | Path = "config/train_config.json") -> TrainConfig:
-    return TrainConfig.from_json(path)
+# Leave-one-component-out ablations of Temporal BORA-Fuse. Each preset is applied
+# on top of the baseline config, so a variant differs from the baseline only by
+# the removed component and the loss attached to it (docs/ablation_design.md).
+ABLATIONS: Dict[str, Dict[str, Any]] = {
+    "no_motion": {"temporal_motion": "none", "motion_loss_weight": 0.0},
+    "no_confidence": {"gate_confidence": "none"},
+    "ordinal_only": {"decoders": "ordinal", "nominal_loss_weight": 0.0},
+    "nominal_only": {"decoders": "nominal", "nominal_loss_weight": 0.0},
+}
+
+
+def load_train_config(
+    path: str | Path = "config/train_config.json",
+    evaluation_mode: Optional[str] = None,
+    ablation: Optional[str] = None,
+) -> TrainConfig:
+    """Load a config, optionally overriding the evaluation mode and applying an ablation preset."""
+    with Path(path).open("r", encoding="utf-8") as f:
+        raw = json.load(f)
+    if evaluation_mode is not None:
+        raw["evaluation_mode"] = evaluation_mode
+    if ablation is not None and ablation != "none":
+        if ablation not in ABLATIONS:
+            raise ValueError(f"Unknown ablation '{ablation}'. Expected one of {sorted(ABLATIONS)}.")
+        raw.setdefault("fusion", {}).setdefault("bora", {}).update(ABLATIONS[ablation])
+    return TrainConfig.model_validate(raw)
 
 
 def experiment_name(cfg: TrainConfig) -> str:
     """Run name used for output directories and uploaded artifacts; ablations get a suffix."""
     name = f"{cfg.audio.backbone}_{cfg.video.backbone}_{cfg.fusion.type}"
-    if cfg.fusion.type == "temporal_bora_fusion" and cfg.fusion.bora.gate_confidence == "none":
+    if cfg.fusion.type != "temporal_bora_fusion":
+        return name
+    bora = cfg.fusion.bora
+    if bora.temporal_motion == "none":
+        name += "_nomotion"
+    if bora.gate_confidence == "none":
         name += "_noconf"
+    if bora.decoders != "dual":
+        name += f"_{bora.decoders}only"
     return name
+
+
+def fold_config(cfg: TrainConfig, fold_index: int) -> TrainConfig:
+    """Copy of cfg whose teacher checkpoints point at one cross-validation fold."""
+    resolved = cfg.model_copy(deep=True)
+    for modality in (resolved.audio, resolved.video):
+        if modality.cv_checkpoint_path.strip():
+            modality.checkpoint_path = modality.cv_checkpoint_path.strip().format(fold=fold_index)
+    return resolved

@@ -7,7 +7,7 @@ from dataset.video_loader import _stratified_frame_indices, _uniform_frame_indic
 from models.fusion import TemporalBORAFusion
 from transforms import VideoClipTransform
 from utils.corruption import corrupt_bora_batch
-from utils.ordinal import bora_loss
+from utils.ordinal import bora_loss, rank_probabilities_to_dataset_order
 
 
 def _fusion_config() -> FusionConfig:
@@ -181,3 +181,122 @@ def test_temporal_bora_gate_confidence_ablation(gate_confidence: str) -> None:
     assert head.audio_reliability_head[0].weight.grad is not None
     assert head.video_reliability_head[0].weight.grad is not None
     assert torch.isfinite(head.audio_reliability_head[0].weight.grad).all()
+
+
+def test_full_model_keeps_construction_order() -> None:
+    # Construction order fixes the seeded initialization; ablation switches must
+    # not reorder the full model's modules or parameters.
+    head = TemporalBORAFusion(10, 12, 4, _fusion_config())
+    assert [name for name, _ in head.named_children()] == [
+        "proj_audio",
+        "proj_video",
+        "temporal_encoder",
+        "motion_projection",
+        "event_gate",
+        "audio_query",
+        "audio_ordinal_head",
+        "video_ordinal_head",
+        "audio_reliability_head",
+        "video_reliability_head",
+        "audio_boundary_projections",
+        "video_boundary_projections",
+        "boundary_interactions",
+        "boundary_classifiers",
+        "motion_regressor",
+        "nominal_head",
+    ]
+    assert list(head._parameters) == [
+        "position",
+        "boundary_queries",
+        "attention_logit_scale",
+        "teacher_residual_scale",
+        "nominal_residual_scale",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("temporal_motion", "decoders"),
+    [("explicit", "dual"), ("none", "dual"), ("explicit", "ordinal"), ("explicit", "nominal")],
+)
+def test_temporal_bora_ablation_variants(temporal_motion: str, decoders: str) -> None:
+    cfg = _fusion_config()
+    cfg.bora.temporal_motion = temporal_motion
+    cfg.bora.decoders = decoders
+    torch.manual_seed(7)
+    head = TemporalBORAFusion(10, 12, 4, cfg)
+    head.set_epoch(3)
+    use_motion = temporal_motion == "explicit"
+    use_ordinal = decoders != "nominal"
+    use_nominal = decoders != "ordinal"
+
+    assert hasattr(head, "motion_projection") == use_motion
+    assert hasattr(head, "motion_regressor") == use_motion
+    assert head.event_gate[0].in_features == 16 * (3 if use_motion else 2)
+    assert hasattr(head, "boundary_classifiers") == use_ordinal
+    assert hasattr(head, "nominal_head") == use_nominal
+    assert hasattr(head, "nominal_residual_scale") == (use_ordinal and use_nominal)
+
+    output = head(
+        torch.randn(6, 10),
+        torch.randn(6, 2, 12),
+        audio_teacher_logits=torch.randn(6, 4),
+        video_teacher_logits=torch.randn(6, 2, 4),
+    )
+    assert ("motion_score" in output) == use_motion
+    assert ("ordinal_logits" in output) == use_ordinal
+    assert ("nominal_logits" in output) == use_nominal
+    assert ("nominal_residual_gate" in output) == (use_ordinal and use_nominal)
+    assert output["clipwise_output"].shape == (6, 4)
+    assert torch.allclose(output["clipwise_output"].exp().sum(1), torch.ones(6), atol=1e-5)
+    assert output["rank_probabilities"].shape == (6, 4)
+    assert torch.allclose(output["rank_probabilities"].sum(1), torch.ones(6), atol=1e-5)
+    # The prediction comes from the kept decoder alone.
+    dataset_probabilities = rank_probabilities_to_dataset_order(output["rank_probabilities"])
+    if decoders == "ordinal":
+        assert torch.allclose(output["clipwise_output"].exp(), dataset_probabilities, atol=1e-5)
+    if decoders == "nominal":
+        assert torch.allclose(output["clipwise_output"], torch.log_softmax(output["nominal_logits"], dim=-1))
+        assert torch.allclose(output["clipwise_output"].exp(), dataset_probabilities)
+
+    loss, parts = bora_loss(
+        output,
+        torch.tensor([0, 1, 2, 3, 0, 1]),
+        aux_loss_weight=0.3,
+        reliability_loss_weight=0.1,
+        categorical_loss_weight=0.5,
+        motion_loss_weight=0.1 if use_motion else 0.0,
+        nominal_loss_weight=0.5 if decoders == "dual" else 0.0,
+        teacher_preservation_weight=0.3,
+        ordinal_loss_weight=1.0 if use_ordinal else 0.0,
+    )
+    loss.backward()
+    assert torch.isfinite(loss)
+    assert (float(parts["fused"]) > 0.0) == use_ordinal
+    assert head.event_gate[0].weight.grad is not None
+    assert head.audio_reliability_head[0].weight.grad is not None
+    if use_ordinal:
+        assert head.boundary_classifiers[0].weight.grad is not None
+    if use_nominal:
+        assert head.nominal_head[0].weight.grad is not None
+    if use_motion:
+        assert head.motion_regressor[0].weight.grad is not None
+
+
+def test_bora_loss_requires_ordinal_logits_unless_disabled() -> None:
+    cfg = _fusion_config()
+    cfg.bora.decoders = "nominal"
+    output = TemporalBORAFusion(10, 12, 4, cfg)(torch.randn(4, 10), torch.randn(4, 2, 12))
+    labels = torch.tensor([0, 1, 2, 3])
+    with pytest.raises(KeyError, match="ordinal_logits"):
+        bora_loss(output, labels, aux_loss_weight=0.3, reliability_loss_weight=0.1, motion_loss_weight=0.1)
+    loss, parts = bora_loss(
+        output,
+        labels,
+        aux_loss_weight=0.3,
+        reliability_loss_weight=0.1,
+        categorical_loss_weight=1.0,
+        motion_loss_weight=0.1,
+        ordinal_loss_weight=0.0,
+    )
+    assert torch.isfinite(loss)
+    assert float(parts["fused"]) == 0.0

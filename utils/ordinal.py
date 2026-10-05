@@ -83,6 +83,13 @@ def rank_probabilities_to_dataset_order(rank_probabilities: torch.Tensor) -> tor
     return rank_probabilities.index_select(1, indexes)
 
 
+def dataset_probabilities_to_rank_order(dataset_probabilities: torch.Tensor) -> torch.Tensor:
+    if dataset_probabilities.ndim != 2 or dataset_probabilities.size(1) != 4:
+        raise ValueError(f"Expected dataset probabilities [B, 4], got {tuple(dataset_probabilities.shape)}.")
+    indexes = torch.tensor(RANK_TO_DATASET_LABEL, dtype=torch.long, device=dataset_probabilities.device)
+    return dataset_probabilities.index_select(1, indexes)
+
+
 def rank_probabilities_to_survival(rank_probabilities: torch.Tensor) -> torch.Tensor:
     """Return P(rank > k) for the three ordinal boundaries."""
     if rank_probabilities.ndim != 2 or rank_probabilities.size(1) != 4:
@@ -170,10 +177,17 @@ def bora_loss(
     motion_loss_weight: float = 0.0,
     nominal_loss_weight: float = 0.0,
     teacher_preservation_weight: float = 0.0,
+    ordinal_loss_weight: float = 1.0,
 ) -> tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     ranks = labels_to_ranks(labels)
     targets, active = ordinal_targets_and_mask(ranks)
-    fused = corn_loss(output["ordinal_logits"], ranks)
+    # CORN loss of the fused ordinal decoder; a nominal-only ablation has none.
+    if ordinal_loss_weight > 0.0:
+        if "ordinal_logits" not in output:
+            raise KeyError("ordinal_logits is required when ordinal_loss_weight > 0.")
+        fused = corn_loss(output["ordinal_logits"], ranks)
+    else:
+        fused = output["audio_ordinal_logits"].new_zeros(())
     audio = corn_loss(output["audio_ordinal_logits"], ranks)
     video = corn_loss(output["video_ordinal_logits"], ranks)
 
@@ -223,7 +237,7 @@ def bora_loss(
     else:
         preservation = fused.new_zeros(())
     total = (
-        fused
+        ordinal_loss_weight * fused
         + aux_loss_weight * (audio + video)
         + reliability_loss_weight * reliability
         + categorical_loss_weight * categorical
