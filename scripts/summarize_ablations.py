@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
 import sys
 from pathlib import Path
@@ -20,7 +21,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from config import ABLATIONS, experiment_name, load_train_config
+from config import ABLATIONS, TrainConfig, experiment_name
 
 METRICS = (
     "test_accuracy",
@@ -65,9 +66,10 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=None, help="Optional CSV report path.")
     args = parser.parse_args()
 
+    raw = json.loads(args.config.read_text(encoding="utf-8"))
     runs: Dict[str, Path] = {}
     for variant in VARIANTS:
-        cfg = load_train_config(args.config, evaluation_mode="holdout", ablation=variant)
+        cfg = TrainConfig.model_validate({**raw, "evaluation_mode": "holdout", "ablation": variant})
         outputs = args.outputs or Path(cfg.output_dir)
         if not outputs.is_absolute():
             outputs = PROJECT_DIR / outputs

@@ -1,7 +1,9 @@
 # Thiết kế ablation — Dual-Decoder Temporal BORA-Fuse
 
 Tài liệu này giải thích mỗi ablation đo cái gì, vì sao cài đặt như vậy và cách diễn giải
-kết quả. Lệnh chạy nằm trong README (mục *Ablations* và *Cross-validation*).
+kết quả. Cách chạy: đặt trường `"ablation"` trong `config/train_config.json` thành một
+trong các tên ở tiêu đề bên dưới (hoặc `"none"` cho Full), rồi chạy `python main.py`.
+Chi tiết xem README, mục *Ablations* và *Cross-validation*.
 
 Baseline (Full): run `MultimodalDL_TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion_holdout_20260924_172932`,
 tức TinyPANNS_ECA + MobileViT-XXS, 2 frame, 200 epoch (test acc 0.9682, QWK 0.978,
@@ -11,9 +13,10 @@ severe error 0.29%). Cấu hình nằm trong `config/train_config.json`.
 
 Mỗi biến thể bằng Full trừ đúng một thành phần, cùng với loss chỉ phục vụ thành phần đó.
 Mọi thứ khác giữ nguyên: seed 42, split, teacher, epoch, learning rate, corruption,
-warm-up và các trọng số loss còn lại. Preset `--ablation` áp lên chính config baseline
-nên các biến thể không thể lệch cấu hình so với Full. Mỗi hàng trong bảng đo đóng góp
-*biên* của một thành phần khi các thành phần còn lại vẫn giữ nguyên.
+warm-up và các trọng số loss còn lại. Khi nạp config, preset của trường `"ablation"`
+được ghi đè lên chính config baseline, nên các biến thể không thể lệch cấu hình so với
+Full. Mỗi hàng trong bảng đo đóng góp *biên* của một thành phần khi các thành phần còn
+lại vẫn giữ nguyên.
 
 Với cấu hình mặc định, Full giữ nguyên thứ tự tạo module nên khởi tạo theo seed giống
 hệt code trước khi thêm ablation. Đã kiểm tra: tham số, output và loss khớp từng bit.
@@ -112,7 +115,7 @@ auxiliary CORN head và `L_rel`, vì gate cần chúng.
   khoảng 0,33%. Chênh lệch dưới ~0,5% cần kiểm định McNemar trên từng cặp dự đoán
   (`scripts/compare_ablation.py`), tốt nhất kèm cross-validation (mean ± std) hoặc
   nhiều seed.
-- Chạy lại Full bằng cùng code và môi trường với bốn biến thể (`run_ablations.sh` đã
-  gồm `none`). GPU không tất định, nên số của Full có thể lệch nhẹ so với 0,9682.
+- Chạy lại Full (`"ablation": "none"`) bằng cùng code và môi trường với bốn biến thể.
+  GPU không tất định, nên số của Full có thể lệch nhẹ so với 0,9682.
 - Cross-validation chỉ hợp lệ khi mỗi fold có teacher riêng, train bằng cùng splitter.
   Dùng chung teacher holdout sẽ rò rỉ nhãn test (xem README, mục *Cross-validation*).

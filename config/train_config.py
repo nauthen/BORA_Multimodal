@@ -182,7 +182,8 @@ def _validate_ablation(fusion: FusionConfig) -> None:
     )
     if is_ablation and fusion.type != "temporal_bora_fusion":
         raise ValueError(
-            "gate_confidence, temporal_motion and decoders ablations apply to temporal_bora_fusion only."
+            "Ablations (the ablation preset or gate_confidence/temporal_motion/decoders) apply to "
+            "temporal_bora_fusion only."
         )
     if bora.temporal_motion == "none" and bora.motion_loss_weight != 0.0:
         raise ValueError("temporal_motion='none' removes the motion regressor; motion_loss_weight must be 0.")
@@ -196,11 +197,25 @@ def _validate_ablation(fusion: FusionConfig) -> None:
         raise ValueError("decoders='nominal' is trained through categorical_loss; categorical_loss_weight must be > 0.")
 
 
+# Leave-one-component-out ablations of Temporal BORA-Fuse, selected with the
+# "ablation" field of train_config.json. Each preset is written into fusion.bora
+# on load, so a variant differs from the baseline only by the removed component
+# and the loss attached to it (docs/ablation_design.md).
+ABLATIONS: Dict[str, Dict[str, Any]] = {
+    "no_motion": {"temporal_motion": "none", "motion_loss_weight": 0.0},
+    "no_confidence": {"gate_confidence": "none"},
+    "ordinal_only": {"decoders": "ordinal", "nominal_loss_weight": 0.0},
+    "nominal_only": {"decoders": "nominal", "nominal_loss_weight": 0.0},
+}
+
+
 class TrainConfig(BaseModel):
     seed: int = 42
     device: str = "cuda"
     num_classes: int = 4
     evaluation_mode: Literal["holdout", "cross_validation"] = "holdout"
+    # "none" = full model; otherwise one key of ABLATIONS.
+    ablation: Literal["none", "no_motion", "no_confidence", "ordinal_only", "nominal_only"] = "none"
     epochs: int = 200
     batch_size: int = 256
     learning_rate: float = 1e-3
@@ -217,8 +232,22 @@ class TrainConfig(BaseModel):
     audio_features: AudioFeaturesConfig = Field(default_factory=AudioFeaturesConfig)
     video_features: VideoFeaturesConfig = Field(default_factory=VideoFeaturesConfig)
 
+    @model_validator(mode="before")
+    @classmethod
+    def apply_ablation_preset(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or data.get("ablation", "none") not in ABLATIONS:
+            # "none", or an unknown name that field validation reports.
+            return data
+        fusion = data.get("fusion", {})
+        fusion = fusion.model_dump() if isinstance(fusion, BaseModel) else dict(fusion)
+        bora = fusion.get("bora", {})
+        bora = bora.model_dump() if isinstance(bora, BaseModel) else dict(bora)
+        fusion["bora"] = {**bora, **ABLATIONS[data["ablation"]]}
+        return {**data, "fusion": fusion}
+
     @model_validator(mode="after")
     def validate_bora_run(self) -> "TrainConfig":
+        _validate_ablation(self.fusion)
         if self.fusion.type not in {"bora_fusion", "temporal_bora_fusion"}:
             return self
         if self.num_classes != 4:
@@ -256,7 +285,6 @@ class TrainConfig(BaseModel):
                 raise ValueError(
                     "fusion.proj_dim must be divisible by fusion.bora.temporal_num_heads."
                 )
-        _validate_ablation(self.fusion)
         return self
 
     @classmethod
@@ -265,32 +293,8 @@ class TrainConfig(BaseModel):
             return cls.model_validate(json.load(f))
 
 
-# Leave-one-component-out ablations of Temporal BORA-Fuse. Each preset is applied
-# on top of the baseline config, so a variant differs from the baseline only by
-# the removed component and the loss attached to it (docs/ablation_design.md).
-ABLATIONS: Dict[str, Dict[str, Any]] = {
-    "no_motion": {"temporal_motion": "none", "motion_loss_weight": 0.0},
-    "no_confidence": {"gate_confidence": "none"},
-    "ordinal_only": {"decoders": "ordinal", "nominal_loss_weight": 0.0},
-    "nominal_only": {"decoders": "nominal", "nominal_loss_weight": 0.0},
-}
-
-
-def load_train_config(
-    path: str | Path = "config/train_config.json",
-    evaluation_mode: Optional[str] = None,
-    ablation: Optional[str] = None,
-) -> TrainConfig:
-    """Load a config, optionally overriding the evaluation mode and applying an ablation preset."""
-    with Path(path).open("r", encoding="utf-8") as f:
-        raw = json.load(f)
-    if evaluation_mode is not None:
-        raw["evaluation_mode"] = evaluation_mode
-    if ablation is not None and ablation != "none":
-        if ablation not in ABLATIONS:
-            raise ValueError(f"Unknown ablation '{ablation}'. Expected one of {sorted(ABLATIONS)}.")
-        raw.setdefault("fusion", {}).setdefault("bora", {}).update(ABLATIONS[ablation])
-    return TrainConfig.model_validate(raw)
+def load_train_config(path: str | Path = "config/train_config.json") -> TrainConfig:
+    return TrainConfig.from_json(path)
 
 
 def experiment_name(cfg: TrainConfig) -> str:

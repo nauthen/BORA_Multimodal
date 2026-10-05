@@ -9,7 +9,7 @@ from typing import Dict, List
 
 import torch
 
-from config import ABLATIONS, experiment_name, fold_config, load_artifact_upload_config, load_train_config
+from config import experiment_name, fold_config, load_artifact_upload_config, load_train_config
 from dataset import create_dataloaders, load_splits
 from tasks import MultimodalTrainer, save_cv_summary
 from utils import set_seed
@@ -40,6 +40,7 @@ def _log_run_configuration(cfg, root: Path) -> None:
             cfg.video.cv_checkpoint_path if cross_validation else cfg.video.checkpoint_path,
         )
     if cfg.fusion.type == "temporal_bora_fusion":
+        logger.info("  - Ablation:                 %s", cfg.ablation)
         logger.info("  - Temporal motion:          %s", cfg.fusion.bora.temporal_motion)
         logger.info("  - Gate confidence:          %s", cfg.fusion.bora.gate_confidence)
         logger.info("  - Decoders:                 %s", cfg.fusion.bora.decoders)
@@ -142,34 +143,16 @@ def _parse_args() -> argparse.Namespace:
         default="config/train_config.json",
         help="Training config path, relative to the project directory unless absolute.",
     )
-    parser.add_argument(
-        "--evaluation-mode",
-        choices=["holdout", "cross_validation"],
-        default=None,
-        help="Override evaluation_mode from the config.",
-    )
-    parser.add_argument(
-        "--ablation",
-        choices=["none", *ABLATIONS],
-        default="none",
-        help="Temporal BORA ablation preset applied on top of the config (see docs/ablation_design.md).",
-    )
     return parser.parse_args()
 
 
 def main() -> None:
     project_dir = Path(__file__).resolve().parent
-    args = _parse_args()
-    config_path = Path(args.config)
+    config_path = Path(_parse_args().config)
     if not config_path.is_absolute():
         config_path = project_dir / config_path
-    logger.info(
-        "Loading training config: %s (evaluation mode override: %s, ablation: %s)",
-        config_path,
-        args.evaluation_mode,
-        args.ablation,
-    )
-    cfg = load_train_config(config_path, evaluation_mode=args.evaluation_mode, ablation=args.ablation)
+    logger.info("Loading training config: %s", config_path)
+    cfg = load_train_config(config_path)
     set_seed(cfg.seed)
     root = _experiment_root(cfg, project_dir)
     root.mkdir(parents=True, exist_ok=True)

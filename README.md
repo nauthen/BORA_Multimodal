@@ -59,16 +59,24 @@ sampling logic).
 
 ## 2. Train + evaluate
 
-`config/train_config.json` is the baseline of run
+Edit only `config/train_config.json`, then run:
+
+```bash
+python main.py
+```
+
+Two fields at the top of the config choose the run:
+
+- `"evaluation_mode"`: `"holdout"` or `"cross_validation"` (see "Cross-validation");
+- `"ablation"`: `"none"` (full model), `"no_motion"`, `"no_confidence"`,
+  `"ordinal_only"` or `"nominal_only"` (see "Ablations").
+
+The rest of the config is the baseline of run
 `MultimodalDL_TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion_holdout_20260924_172932`
 (test acc 0.9682): `TinyPANNS_ECA + MobileViTXXS + temporal_bora_fusion`,
 `num_frames=2`, `epochs=200`, `patience=200`, dual-decoder losses
-`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`. Then:
-
-```bash
-python main.py                                       # holdout (evaluation_mode in the config)
-python main.py --evaluation-mode cross_validation    # see "Cross-validation" below
-```
+`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`. Leave it unchanged
+across ablations.
 
 To use the PANNs Cnn6 audio branch instead, change only the audio block
 (`"backbone": "PANNS_Cnn6"` and its checkpoint). Both global and temporal BORA
@@ -90,12 +98,15 @@ checkpoint, runs the held-out test once, and writes to
 
 ## Ablations
 
-Leave-one-component-out: `--ablation <preset>` applies a preset on top of the
-config, so each variant differs from the full model only by the removed
-component and the loss attached to it. Design rationale, what each row
-measures, and how to interpret it: `docs/ablation_design.md`.
+Leave-one-component-out: set `"ablation"` in `config/train_config.json` and run
+`python main.py`. On load the preset is written into `fusion.bora` (the switches
+below), so each variant differs from the full model only by the removed
+component and the loss attached to it; nothing else in the config needs editing.
+Each variant writes to its own output directory and artifact name. Design
+rationale, what each row measures, and how to interpret it:
+`docs/ablation_design.md`.
 
-| `--ablation` | Config switches | Removes | Output suffix |
+| `"ablation"` | Switches it sets | Removes | Output suffix |
 |---|---|---|---|
 | `none` | — | nothing (full model) | — |
 | `no_motion` | `temporal_motion="none"`, `motion_loss_weight=0` | frame-difference cue in tokens and event gate, motion regressor + loss | `_nomotion` |
@@ -103,10 +114,9 @@ measures, and how to interpret it: `docs/ablation_design.md`.
 | `ordinal_only` | `decoders="ordinal"`, `nominal_loss_weight=0` | nominal decoder (decoder 2) + coupling | `_ordinalonly` |
 | `nominal_only` | `decoders="nominal"`, `nominal_loss_weight=0` | ordinal CORN decoder (decoder 1) + its loss | `_nominalonly` |
 
+After the runs, compare them:
+
 ```bash
-bash scripts/run_ablations.sh holdout                  # full model + 4 ablations
-bash scripts/run_ablations.sh holdout no_motion        # selected variants only
-python main.py --ablation ordinal_only                 # one variant
 python scripts/summarize_ablations.py --out outputs/ablation_summary.csv
 python scripts/compare_ablation.py \
   outputs/TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion/holdout \
@@ -119,29 +129,32 @@ cross-validation mean ± std) with its difference from the full model.
 `compare_ablation.py` gives outcome metrics, per-boundary gate mechanics
 (video-gate mean/std, fraction of "dead" gates in [0.45, 0.55], gate separation
 between correct and wrong predictions, reliability mean/std) and an exact
-McNemar test on the paired test predictions. Re-run the full model with the
-same code (`none` is included in `run_ablations.sh`); this overwrites
+McNemar test on the paired test predictions. Re-run the full model
+(`"ablation": "none"`) with the same code; this overwrites
 `outputs/<baseline>/holdout`. Accuracy gaps below ~0.5% need McNemar and ideally
 cross-validation or several seeds.
+
+Optional: `bash scripts/run_ablations.sh holdout` runs the full model and the
+four ablations back to back. Each run is `python main.py` on a copy of the
+config with `"ablation"` and `"evaluation_mode"` set; pass variant names after
+the mode to run a subset.
 
 ## Cross-validation
 
 BORA cross-validation needs **one teacher per fold**: a holdout teacher was
 trained on most of every CV test fold, which would leak test labels. Train the
 single-modal audio and video teachers in cross-validation mode with the same
-splitter settings (seed 42, `num_folds=5`, `cv_val_ratio=0.2`), then point the
-config at them with a `{fold}` template (each checkpoint keeps its `splits/`
-sidecar beside it):
+splitter settings (seed 42, `num_folds=5`, `cv_val_ratio=0.2`). Then, in
+`config/train_config.json`, set `"evaluation_mode": "cross_validation"` and point
+`cv_checkpoint_path` at them with a `{fold}` template (each checkpoint keeps its
+`splits/` sidecar beside it), and run `python main.py`:
 
 ```json
 "audio": { "cv_checkpoint_path": "/marimo/checkpoints/audio_cv/fold_{fold:02d}/checkpoint/audio_best.pt" },
 "video": { "cv_checkpoint_path": "/marimo/checkpoints/video_cv/fold_{fold:02d}/checkpoint/video_best.pt" }
 ```
 
-```bash
-python main.py --evaluation-mode cross_validation
-bash scripts/run_ablations.sh cross_validation
-```
+`"ablation"` works the same way in cross-validation.
 
 Before any training, every fold's teachers are checked against that fold's
 split (`validate_checkpoint_split_integrity`), so a missing or mismatched
@@ -160,8 +173,8 @@ fusion forward shapes, warmup + adaptive gates, gradient flow to both encoders
 and teacher residual, the nominal decoder and its coupling gate, both new loss
 terms, corruption augmentation, optimizer parameter groups,
 checkpoint/split integrity, every ablation variant (modules, outputs, losses,
-unchanged full-model construction order), ablation presets, and per-fold
-teacher resolution in cross-validation.
+unchanged full-model construction order), the `ablation` config field, and
+per-fold teacher resolution in cross-validation.
 
 Besides the ablation tools above, `scripts/` retains optional analysis
 utilities (snapshot probability caching, ensemble evaluation); none of them are
