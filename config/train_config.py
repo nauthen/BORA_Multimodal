@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, model_validator
 DEFAULT_IMAGE_CACHE_ROOT = "video_image_cache"
 VALID_CACHE_MODES = {"none", "ram", "disk"}
 BORA_AUDIO_BACKBONES = {"PANNS_Cnn6", "PANNS_Cnn6_DW_ECA", "TinyPANNS_ECA"}
-BORA_VIDEO_BACKBONES = {"SwinTiny", "EfficientNetB0", "MobileViTXXS"}
+BORA_VIDEO_BACKBONES = {"SwinTiny", "EfficientNetB0", "MobileViTXXS", "MobileNetV2"}
 
 
 class AudioFeaturesConfig(BaseModel):

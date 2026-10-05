@@ -78,12 +78,19 @@ The rest of the config is the baseline of run
 `nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`. Leave it unchanged
 across ablations.
 
-To use the PANNs Cnn6 audio branch instead, change only the audio block
-(`"backbone": "PANNS_Cnn6"` and its checkpoint). Both global and temporal BORA
-accept `PANNS_Cnn6`, `PANNS_Cnn6_DW_ECA` and `TinyPANNS_ECA`; the audio
-checkpoint loader is strict and expects the single-modal wrapper keys
-`frontend.*` and `backbone.*`, preventing a silently partial or wrong-model
-load.
+To change the teacher pair, edit only the `"audio"` / `"video"` blocks: the
+`"backbone"` name plus its `checkpoint_path` (and `cv_checkpoint_path` for
+cross-validation). Every pair of these is supported, in holdout and
+cross-validation:
+
+- audio: `PANNS_Cnn6`, `TinyPANNS_ECA`, `PANNS_Cnn6_DW_ECA`;
+- video: `EfficientNetB0`, `MobileViTXXS`, `MobileNetV2`, `SwinTiny`.
+
+Each pair writes to its own `outputs/<audio>_<video>_temporal_bora_fusion/`
+directory. The teacher loaders are strict and expect the single-modal wrapper
+keys (`frontend.*` and `backbone.*` for audio, `backbone.*` for video), so a
+checkpoint of a different backbone than the configured one fails immediately
+instead of loading silently.
 
 The trainer fits, selects the best epoch by validation accuracy, reloads that
 checkpoint, runs the held-out test once, and writes to

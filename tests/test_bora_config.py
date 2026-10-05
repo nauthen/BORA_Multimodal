@@ -42,6 +42,16 @@ def test_bora_config_accepts_efficientnet_video() -> None:
     assert config.video.backbone == "EfficientNetB0"
 
 
+@pytest.mark.parametrize("audio", ["PANNS_Cnn6", "PANNS_Cnn6_DW_ECA", "TinyPANNS_ECA"])
+@pytest.mark.parametrize("video", ["EfficientNetB0", "MobileViTXXS", "MobileNetV2", "SwinTiny"])
+def test_bora_config_accepts_every_teacher_pair(audio: str, video: str) -> None:
+    raw = _valid_bora_config()
+    raw["audio"]["backbone"] = audio
+    raw["video"]["backbone"] = video
+    config = TrainConfig.model_validate(raw)
+    assert (config.audio.backbone, config.video.backbone) == (audio, video)
+
+
 def test_bora_config_accepts_mobilevit_xxs_video() -> None:
     raw = _valid_bora_config()
     raw["video"]["backbone"] = "MobileViTXXS"
