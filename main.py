@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import gc
 import logging
 import sys
 from pathlib import Path
 from typing import Dict, List
 
-from config import load_artifact_upload_config, load_train_config
+import torch
+
+from config import fold_config, load_artifact_upload_config, load_train_config
 from dataset import create_dataloaders, load_splits
 from tasks import MultimodalTrainer, save_cv_summary
 from utils import set_seed
@@ -15,15 +18,26 @@ from utils.checkpoint_integrity import validate_checkpoint_split_integrity
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+BORA_TYPES = {"bora_fusion", "temporal_bora_fusion"}
 
 
 def _log_run_configuration(cfg, root: Path) -> None:
+    cross_validation = cfg.evaluation_mode == "cross_validation"
     logger.info("==================================================")
     logger.info("Multimodal Deep Fusion configuration")
     logger.info("  - Evaluation mode:          %s", cfg.evaluation_mode)
     logger.info("  - Audio backbone:           %s", cfg.audio.backbone)
     logger.info("  - Video backbone:           %s", cfg.video.backbone)
     logger.info("  - Fusion head:              %s", cfg.fusion.type)
+    if cfg.fusion.type in BORA_TYPES:
+        logger.info(
+            "  - Audio teacher:            %s",
+            cfg.audio.cv_checkpoint_path if cross_validation else cfg.audio.checkpoint_path,
+        )
+        logger.info(
+            "  - Video teacher:            %s",
+            cfg.video.cv_checkpoint_path if cross_validation else cfg.video.checkpoint_path,
+        )
     logger.info("  - Epochs:                   %s", cfg.epochs)
     logger.info("  - Batch size:               %s", cfg.batch_size)
     logger.info("  - Optimizer:                %s", cfg.optimizer)
@@ -48,7 +62,7 @@ def _experiment_root(cfg, project_dir: Path) -> Path:
 def _run_holdout(cfg, root: Path) -> Dict[str, float]:
     logger.info("Starting holdout multimodal training.")
     splits = load_splits(cfg.dataset, mode="holdout")
-    if cfg.fusion.type in {"bora_fusion", "temporal_bora_fusion"}:
+    if cfg.fusion.type in BORA_TYPES:
         validate_checkpoint_split_integrity(cfg.audio.checkpoint_path, splits, "Audio")
         validate_checkpoint_split_integrity(cfg.video.checkpoint_path, splits, "Video")
     loaders = create_dataloaders(
@@ -69,11 +83,26 @@ def _run_holdout(cfg, root: Path) -> Dict[str, float]:
     return trainer.fit()
 
 
+def _preflight_cross_validation_teachers(cfg) -> None:
+    """Check every fold's teachers against that fold's split before any training starts."""
+    for fold_index in range(cfg.dataset.num_folds):
+        fold_cfg = fold_config(cfg, fold_index)
+        splits = load_splits(cfg.dataset, mode="cross_validation", fold_index=fold_index)
+        validate_checkpoint_split_integrity(fold_cfg.audio.checkpoint_path, splits, f"Audio fold_{fold_index:02d}")
+        validate_checkpoint_split_integrity(fold_cfg.video.checkpoint_path, splits, f"Video fold_{fold_index:02d}")
+    logger.info("Teacher checkpoints of all %d folds match their fold splits.", cfg.dataset.num_folds)
+
+
 def _run_cross_validation(cfg, root: Path) -> List[Dict[str, float]]:
     logger.info("Starting cross-validation multimodal training with %d folds.", cfg.dataset.num_folds)
+    if cfg.fusion.type in BORA_TYPES:
+        _preflight_cross_validation_teachers(cfg)
     fold_results: List[Dict[str, float]] = []
     for fold_index in range(cfg.dataset.num_folds):
         logger.info("Starting cross-validation fold_%02d.", fold_index)
+        # Re-seed so each fold is reproducible on its own.
+        set_seed(cfg.seed)
+        fold_cfg = fold_config(cfg, fold_index)
         splits = load_splits(cfg.dataset, mode="cross_validation", fold_index=fold_index)
         loaders = create_dataloaders(
             splits=splits,
@@ -84,13 +113,19 @@ def _run_cross_validation(cfg, root: Path) -> List[Dict[str, float]]:
             num_frames=cfg.video_features.num_frames,
         )
         trainer = MultimodalTrainer(
-            cfg=cfg,
+            cfg=fold_cfg,
             loaders=loaders,
             output_dir=root / "cross_validation" / f"fold_{fold_index:02d}",
             splits=splits,
             run_name=f"cross_validation_fold_{fold_index:02d}",
         )
         fold_results.append(trainer.fit())
+        # Free this fold's RAM caches, loader workers and GPU memory before the
+        # next fold builds its own; otherwise both folds' caches coexist.
+        del trainer, loaders, splits
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     save_cv_summary(fold_results, root / "cross_validation")
     return fold_results
 

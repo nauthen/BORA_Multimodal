@@ -56,35 +56,34 @@ sampling logic).
 
 ## 2. Train + evaluate
 
-Edit only `config/train_config.json` (already set to
-`MobileViTXXS + temporal_bora_fusion`, `num_frames=8`, dual-decoder losses
-`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`), then:
-
-To replace the PANNs Cnn6 audio branch with the Tiny PANNs + ECA checkpoint,
-change only the audio block (leave the audio-feature settings identical to the
-single-modal training run):
-
-```json
-"audio": {
-  "backbone": "TinyPANNS_ECA",
-  "pretrained": false,
-  "freeze": false,
-  "checkpoint_path": "/path/to/tiny_panns_eca/audio_best.pt"
-}
-```
-
-Both global and temporal BORA accept `TinyPANNS_ECA`. Their audio checkpoint
-loader remains strict and expects the single-modal wrapper keys
-`frontend.*` and `backbone.*`, preventing a silently partial or wrong-model
-load.
+Edit only `config/train_config.json`, then run:
 
 ```bash
 python main.py
 ```
 
+The config ships with the setup of run
+`MultimodalDL_TinyPANNS_ECA_MobileViTXXS_temporal_bora_fusion_holdout_20260924_172932`
+(test acc 0.9682): `TinyPANNS_ECA + MobileViTXXS + temporal_bora_fusion`,
+`num_frames=2`, `epochs=200`, `patience=200`, dual-decoder losses
+`nominal_loss_weight=0.5`, `teacher_preservation_weight=0.3`.
+
+To change the teacher pair, edit only the `"audio"` / `"video"` blocks: the
+`"backbone"` name plus its `checkpoint_path` (and `cv_checkpoint_path` for
+cross-validation). Every pair of these runs in holdout and cross-validation:
+
+- audio: `PANNS_Cnn6`, `TinyPANNS_ECA`, `PANNS_Cnn6_DW_ECA`;
+- video: `EfficientNetB0`, `MobileViTXXS`, `MobileNetV2`, `SwinTiny`.
+
+The teacher loaders are strict and expect the single-modal wrapper keys
+(`frontend.*` and `backbone.*` for audio, `backbone.*` for video), so a
+checkpoint of a different backbone than the configured one fails immediately
+instead of loading silently.
+
 The trainer fits, selects the best epoch by validation accuracy, reloads that
 checkpoint, runs the held-out test once, and writes to
-`outputs/PANNS_Cnn6_MobileViTXXS_temporal_bora_fusion/holdout/`:
+`outputs/<audio>_<video>_temporal_bora_fusion/holdout/` (one directory per
+pair):
 
 - `result.csv` — accuracy, mAP, rank MAE, QWK, within-one, severe-error rate;
 - `history.csv`, `learning_curves.png`, confusion outputs;
@@ -92,6 +91,27 @@ checkpoint, runs the held-out test once, and writes to
   (every new validation-best) for reproducibility/analysis;
 - `predictions.csv`, `gate_summary.csv` — per-sample audit of gates,
   reliabilities and probabilities.
+
+## Cross-validation
+
+BORA cross-validation needs **one teacher per fold**: a holdout teacher was
+trained on most of every CV test fold, which would leak test labels. Train the
+single-modal audio and video teachers in cross-validation mode with the same
+splitter settings (seed 42, `num_folds=5`, `cv_val_ratio=0.2`). Then, in
+`config/train_config.json`, set `"evaluation_mode": "cross_validation"`, point
+`cv_checkpoint_path` at them with a `{fold}` template (each checkpoint keeps its
+`splits/` sidecar beside it), and run `python main.py`:
+
+```json
+"audio": { "cv_checkpoint_path": "/marimo/checkpoints/audio_cv/fold_{fold:02d}/checkpoint/audio_best.pt" },
+"video": { "cv_checkpoint_path": "/marimo/checkpoints/video_cv/fold_{fold:02d}/checkpoint/video_best.pt" }
+```
+
+Before any training, every fold's teachers are checked against that fold's
+split (`validate_checkpoint_split_integrity`), so a missing or mismatched
+teacher fails immediately instead of at fold 3. Results go to
+`outputs/<experiment>/cross_validation/fold_XX/` plus `fold_results.csv` and
+`summary_mean_std.csv`. Holdout keeps using `checkpoint_path`.
 
 ## Tests
 

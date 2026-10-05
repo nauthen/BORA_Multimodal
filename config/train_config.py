@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, model_validator
 DEFAULT_IMAGE_CACHE_ROOT = "video_image_cache"
 VALID_CACHE_MODES = {"none", "ram", "disk"}
 BORA_AUDIO_BACKBONES = {"PANNS_Cnn6", "PANNS_Cnn6_DW_ECA", "TinyPANNS_ECA"}
-BORA_VIDEO_BACKBONES = {"SwinTiny", "EfficientNetB0", "MobileViTXXS"}
+BORA_VIDEO_BACKBONES = {"SwinTiny", "EfficientNetB0", "MobileViTXXS", "MobileNetV2"}
 
 
 class AudioFeaturesConfig(BaseModel):
@@ -51,6 +51,11 @@ class ModalityConfig(BaseModel):
     pretrained: bool = False
     freeze: bool = False
     checkpoint_path: str = ""
+    # Cross-validation teacher template with a {fold} placeholder, e.g.
+    # ".../fold_{fold:02d}/checkpoint/audio_best.pt" (splits/ sidecar beside it).
+    # BORA cross-validation needs one teacher per fold: a holdout teacher was
+    # trained on most of every CV test fold.
+    cv_checkpoint_path: str = ""
 
 
 class BoraConfig(BaseModel):
@@ -133,6 +138,32 @@ class DatasetConfig(BaseModel):
     cv_val_ratio: float = 0.2
 
 
+FOLD_PLACEHOLDER = "{fold"
+
+
+def _validate_teacher_paths(name: str, modality: ModalityConfig, evaluation_mode: str) -> None:
+    if evaluation_mode == "holdout":
+        if not modality.checkpoint_path.strip():
+            raise ValueError(f"BORA-Fuse requires {name}.checkpoint_path.")
+        if FOLD_PLACEHOLDER in modality.checkpoint_path:
+            raise ValueError(
+                f"{name}.checkpoint_path contains a fold placeholder; holdout needs one fixed teacher "
+                f"checkpoint (per-fold templates belong in {name}.cv_checkpoint_path)."
+            )
+        return
+    template = modality.cv_checkpoint_path.strip()
+    if FOLD_PLACEHOLDER not in template:
+        raise ValueError(
+            f"BORA-Fuse cross-validation needs one {name} teacher per fold: set {name}.cv_checkpoint_path "
+            "to a template containing {fold}, e.g. '.../fold_{fold:02d}/checkpoint/" + name + "_best.pt'. "
+            "A holdout teacher was trained on most of every cross-validation test fold."
+        )
+    try:
+        template.format(fold=0)
+    except (IndexError, KeyError, ValueError) as exc:
+        raise ValueError(f"{name}.cv_checkpoint_path is not a valid fold template: {template!r} ({exc}).") from exc
+
+
 class TrainConfig(BaseModel):
     seed: int = 42
     device: str = "cuda"
@@ -170,14 +201,14 @@ class TrainConfig(BaseModel):
                 "BORA-Fuse requires audio backbone PANNS_Cnn6, "
                 "PANNS_Cnn6_DW_ECA, or TinyPANNS_ECA."
             )
-        if self.evaluation_mode != "holdout" or self.dataset.split_strategy != "random_sample":
-            raise ValueError("BORA-Fuse supports random_sample holdout evaluation only.")
+        if self.dataset.split_strategy != "random_sample":
+            raise ValueError("BORA-Fuse supports the random_sample split strategy only.")
         if self.optimizer != "adam":
             raise ValueError("BORA-Fuse uses Adam with encoder/head parameter groups; optimizer must be 'adam'.")
         if self.monitor != "accuracy":
             raise ValueError("BORA-Fuse selects its best checkpoint by accuracy; monitor must be 'accuracy'.")
-        if not self.audio.checkpoint_path.strip() or not self.video.checkpoint_path.strip():
-            raise ValueError("BORA-Fuse requires both audio.checkpoint_path and video.checkpoint_path.")
+        for name, modality in (("audio", self.audio), ("video", self.video)):
+            _validate_teacher_paths(name, modality, self.evaluation_mode)
         if self.audio.freeze or self.video.freeze:
             raise ValueError("BORA-Fuse fine-tunes both encoders; audio.freeze and video.freeze must be false.")
         if self.fusion.type == "bora_fusion" and self.video_features.num_frames != 1:
@@ -203,3 +234,12 @@ class TrainConfig(BaseModel):
 
 def load_train_config(path: str | Path = "config/train_config.json") -> TrainConfig:
     return TrainConfig.from_json(path)
+
+
+def fold_config(cfg: TrainConfig, fold_index: int) -> TrainConfig:
+    """Copy of cfg whose teacher checkpoints point at one cross-validation fold."""
+    resolved = cfg.model_copy(deep=True)
+    for modality in (resolved.audio, resolved.video):
+        if modality.cv_checkpoint_path.strip():
+            modality.checkpoint_path = modality.cv_checkpoint_path.strip().format(fold=fold_index)
+    return resolved
