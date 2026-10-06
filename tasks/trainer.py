@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import shutil
 import time
 from pathlib import Path
 from typing import Any, Dict, List
@@ -549,12 +548,6 @@ class MultimodalTrainer:
                     },
                     best_path,
                 )
-                # Snapshot every new validation-best so snapshot ensembles can be
-                # selected on validation afterwards without re-training.
-                snapshots_dir = best_path.parent / "snapshots"
-                snapshots_dir.mkdir(parents=True, exist_ok=True)
-                snapshot_name = f"epoch_{epoch:03d}_val_{float(val_metrics['accuracy']):.6f}.pt"
-                shutil.copy2(best_path, snapshots_dir / snapshot_name)
                 logger.info(
                     "Saved best model checkpoint to: '%s' (Monitor value = %.5f)",
                     best_path,

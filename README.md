@@ -87,8 +87,7 @@ pair):
 
 - `result.csv` — accuracy, mAP, rank MAE, QWK, within-one, severe-error rate;
 - `history.csv`, `learning_curves.png`, confusion outputs;
-- `checkpoint/multimodal_best.pt` plus `checkpoint/snapshots/*.pt`
-  (every new validation-best) for reproducibility/analysis;
+- `checkpoint/multimodal_best.pt` (overwritten at every new validation-best);
 - `predictions.csv`, `gate_summary.csv` — per-sample audit of gates,
   reliabilities and probabilities.
 

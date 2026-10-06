@@ -104,7 +104,7 @@ flowchart TD
     MODEL --> FIT["Train epoch hiện tại"]
     FIT --> VAL["Đánh giá clean validation"]
     VAL --> SELECT{"Validation accuracy<br/>tốt hơn best hiện tại?"}
-    SELECT -->|"Có"| SAVE["Ghi đè multimodal_best.pt<br/>và lưu best snapshot"]
+    SELECT -->|"Có"| SAVE["Ghi đè multimodal_best.pt"]
     SELECT -->|"Không"| EARLY["Tăng early-stopping counter"]
     SAVE --> NEXT{"Đã đủ 120 epochs?"}
     EARLY --> PATIENCE{"Counter đạt patience=20<br/>hoặc đã đủ 120 epochs?"}
