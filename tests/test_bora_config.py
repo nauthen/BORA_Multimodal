@@ -118,3 +118,17 @@ def test_repository_config_loads_in_both_modes(evaluation_mode: str) -> None:
     raw["audio"]["cv_checkpoint_path"] = "/cv/audio/fold_{fold:02d}/audio_best.pt"
     raw["video"]["cv_checkpoint_path"] = "/cv/video/fold_{fold:02d}/video_best.pt"
     assert TrainConfig.model_validate(raw).evaluation_mode == evaluation_mode
+
+
+def test_attention_ablation_gets_its_own_experiment_name() -> None:
+    raw = _valid_bora_config()
+    raw["fusion"] = {"type": "temporal_bora_fusion"}
+    raw["video_features"] = {"num_frames": 2}
+    cosine = TrainConfig.model_validate(raw)
+    assert cosine.experiment_name == "PANNS_Cnn6_SwinTiny_temporal_bora_fusion"
+    raw["fusion"]["bora"] = {"temporal_attention": "dot_product"}
+    ablation = TrainConfig.model_validate(raw)
+    assert ablation.experiment_name == "PANNS_Cnn6_SwinTiny_temporal_bora_fusion_dot_product_attention"
+    raw["fusion"]["bora"] = {"temporal_attention": "softmax"}
+    with pytest.raises(ValidationError):
+        TrainConfig.model_validate(raw)

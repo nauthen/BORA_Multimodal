@@ -151,3 +151,33 @@ def test_temporal_bora_config_requires_multiple_frames() -> None:
         TrainConfig.model_validate(raw)
     raw["video_features"]["num_frames"] = 8
     assert TrainConfig.model_validate(raw).video_features.num_frames == 8
+
+
+@pytest.mark.parametrize("attention", ["cosine", "dot_product", "additive", "none"])
+def test_temporal_attention_variants_are_distributions_with_gradients(attention: str) -> None:
+    cfg = _fusion_config()
+    cfg.bora.temporal_attention = attention
+    head = TemporalBORAFusion(10, 12, 4, cfg)
+    head.set_epoch(3)
+    output = head(torch.randn(6, 10), torch.randn(6, 5, 12))
+    assert output["temporal_attention"].shape == (6, 3, 5)
+    assert torch.allclose(output["temporal_attention"].sum(-1), torch.ones(6, 3), atol=1e-6)
+    output["clipwise_output"].sum().backward()
+    attention_parameters = {
+        name: p for name, p in head.named_parameters()
+        if name.startswith(("boundary_queries", "audio_query", "attention_", "event_gate"))
+    }
+    assert attention_parameters
+    for name, parameter in attention_parameters.items():
+        assert parameter.grad is not None and torch.isfinite(parameter.grad).all(), name
+    if attention == "none":
+        # Without a query match all three boundaries pool the same evidence.
+        attention_map = output["temporal_attention"]
+        assert torch.allclose(attention_map[:, 0], attention_map[:, 1])
+        assert torch.allclose(attention_map[:, 0], attention_map[:, 2])
+
+
+def test_cosine_attention_keeps_checkpoint_layout() -> None:
+    names = set(TemporalBORAFusion(10, 12, 4, _fusion_config()).state_dict())
+    assert {"boundary_queries", "attention_logit_scale", "audio_query.weight"} <= names
+    assert not any(name.startswith("attention_") and name != "attention_logit_scale" for name in names)

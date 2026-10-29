@@ -17,10 +17,7 @@ logger = logging.getLogger(__name__)
 
 def build_artifact_name(cfg: TrainConfig) -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return (
-        f"MultimodalDL_{cfg.audio.backbone}_{cfg.video.backbone}_"
-        f"{cfg.fusion.type}_{cfg.evaluation_mode}_{timestamp}.zip"
-    )
+    return f"MultimodalDL_{cfg.experiment_name}_{cfg.evaluation_mode}_{timestamp}.zip"
 
 
 def zip_source_tree(source_dir: str | Path, output_zip: str | Path) -> Path:
@@ -77,8 +74,7 @@ def upload_cv_fold_if_enabled(
     root_path = Path(archive_root).resolve()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     artifact_name = (
-        f"MultimodalDL_{train_cfg.audio.backbone}_{train_cfg.video.backbone}_{train_cfg.fusion.type}_"
-        f"cross_validation_fold_{fold_index:02d}_{timestamp}.zip"
+        f"MultimodalDL_{train_cfg.experiment_name}_cross_validation_fold_{fold_index:02d}_{timestamp}.zip"
     )
     with tempfile.TemporaryDirectory() as tmp_dir:
         zip_path = Path(

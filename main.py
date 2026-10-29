@@ -54,11 +54,10 @@ def _log_run_configuration(cfg, root: Path) -> None:
 
 
 def _experiment_root(cfg, project_dir: Path) -> Path:
-    name = f"{cfg.audio.backbone}_{cfg.video.backbone}_{cfg.fusion.type}"
     output_dir = Path(cfg.output_dir)
     if not output_dir.is_absolute():
         output_dir = project_dir / output_dir
-    return output_dir / name
+    return output_dir / cfg.experiment_name
 
 
 def _run_holdout(cfg, root: Path) -> Dict[str, float]:

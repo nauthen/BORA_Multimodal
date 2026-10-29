@@ -243,10 +243,18 @@ class TemporalBORAFusion(nn.Module):
         self.event_gate = nn.Sequential(
             nn.Linear(dim * 3, hidden), nn.GELU(), nn.Dropout(cfg.dropout), nn.Linear(hidden, 1)
         )
-        self.boundary_queries = nn.Parameter(torch.empty(3, dim))
-        nn.init.trunc_normal_(self.boundary_queries, std=0.02)
-        self.attention_logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
-        self.audio_query = nn.Linear(dim, dim * 3)
+        self.temporal_attention_type = cfg.bora.temporal_attention
+        if self.temporal_attention_type != "none":
+            self.boundary_queries = nn.Parameter(torch.empty(3, dim))
+            nn.init.trunc_normal_(self.boundary_queries, std=0.02)
+            self.audio_query = nn.Linear(dim, dim * 3)
+        if self.temporal_attention_type == "cosine":
+            self.attention_logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
+        elif self.temporal_attention_type == "additive":
+            # Bahdanau scoring: v^T tanh(W_k h_t + W_q Q_k).
+            self.attention_key = nn.Linear(dim, dim, bias=False)
+            self.attention_query = nn.Linear(dim, dim)
+            self.attention_vector = nn.Linear(dim, 1, bias=False)
         self.audio_ordinal_head = nn.Linear(dim, 3)
         self.video_ordinal_head = nn.Linear(dim, 3)
         self.audio_reliability_head = nn.Sequential(
@@ -316,6 +324,22 @@ class TemporalBORAFusion(nn.Module):
         ).clamp(1e-5, 1.0 - 1e-5)
         return torch.logit(conditionals)
 
+    def _query_scores(self, tokens: torch.Tensor, audio: torch.Tensor) -> torch.Tensor:
+        """Query-token match [B, 3, T] before the event prior is added."""
+        if self.temporal_attention_type == "none":
+            return tokens.new_zeros(tokens.size(0), 3, tokens.size(1))
+        queries = self.audio_query(audio).view(audio.size(0), 3, -1) + self.boundary_queries.unsqueeze(0)
+        if self.temporal_attention_type == "cosine":
+            return torch.einsum(
+                "btd,bkd->bkt", F.normalize(tokens, dim=-1), F.normalize(queries, dim=-1)
+            ) * self.attention_logit_scale.exp().clamp(max=100.0)
+        if self.temporal_attention_type == "dot_product":
+            return torch.einsum("btd,bkd->bkt", tokens, queries) / math.sqrt(tokens.size(-1))
+        hidden = torch.tanh(
+            self.attention_key(tokens).unsqueeze(1) + self.attention_query(queries).unsqueeze(2)
+        )
+        return self.attention_vector(hidden).squeeze(-1)
+
     def forward(
         self,
         audio_feat: torch.Tensor,
@@ -342,10 +366,7 @@ class TemporalBORAFusion(nn.Module):
         event_logits = self.event_gate(torch.cat([tokens, audio_expanded, motion_context], dim=-1)).squeeze(-1)
         event_probabilities = torch.sigmoid(event_logits)
 
-        queries = self.audio_query(audio).view(audio.size(0), 3, -1) + self.boundary_queries.unsqueeze(0)
-        attention_logits = torch.einsum(
-            "btd,bkd->bkt", F.normalize(tokens, dim=-1), F.normalize(queries, dim=-1)
-        ) * self.attention_logit_scale.exp().clamp(max=100.0)
+        attention_logits = self._query_scores(tokens, audio)
         attention_logits = attention_logits + torch.log(event_probabilities.clamp_min(1e-6)).unsqueeze(1)
         temporal_attention = F.softmax(attention_logits, dim=-1)
         video_boundaries = torch.einsum("bkt,btd->bkd", temporal_attention, tokens)

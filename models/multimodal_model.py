@@ -201,4 +201,4 @@ class MultimodalDeepFusionModel(nn.Module):
         return output
 
     def get_name(self) -> str:
-        return f"{self.cfg.audio.backbone}_{self.cfg.video.backbone}_{self.cfg.fusion.type}"
+        return self.cfg.experiment_name

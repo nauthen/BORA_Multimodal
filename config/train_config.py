@@ -79,6 +79,10 @@ class BoraConfig(BaseModel):
     temporal_num_layers: int = Field(default=2, ge=1, le=6)
     temporal_num_heads: int = Field(default=4, ge=1)
     temporal_max_frames: int = Field(default=16, ge=2, le=64)
+    # Scoring of the audio-conditioned boundary queries against the temporal
+    # video tokens. "cosine" is the proposed method; the others are ablations.
+    # Every variant keeps the log event prior; "none" drops the query match.
+    temporal_attention: Literal["cosine", "dot_product", "additive", "none"] = "cosine"
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "BoraConfig":
@@ -244,6 +248,15 @@ class TrainConfig(BaseModel):
                     "fusion.proj_dim must be divisible by fusion.bora.temporal_num_heads."
                 )
         return self
+
+    @property
+    def experiment_name(self) -> str:
+        """Output folder and artifact stem; attention ablations get their own suffix."""
+        name = f"{self.audio.backbone}_{self.video.backbone}_{self.fusion.type}"
+        attention = self.fusion.bora.temporal_attention
+        if self.fusion.type == "temporal_bora_fusion" and attention != "cosine":
+            name += f"_{attention}_attention"
+        return name
 
     @classmethod
     def from_json(cls, path: str | Path) -> "TrainConfig":
