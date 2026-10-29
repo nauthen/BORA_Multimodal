@@ -16,14 +16,14 @@
     "backbone": "TinyPANNS_ECA",
     "pretrained": false,
     "freeze": false,
-    "checkpoint_path": "/marimo/checkpoints/audio_run/DL_audio/checkpoint/panns_cnn6/audio_best.pt",
+    "checkpoint_path": "/marimo/checkpoints/audio_run/DL_audio/checkpoint/tiny_panns_eca/audio_best.pt",
     "cv_checkpoint_path": ""
   },
   "video": {
-    "backbone": "MobileViTXXS",
+    "backbone": "EfficientNetB0",
     "pretrained": false,
     "freeze": false,
-    "checkpoint_path": "/marimo/checkpoints/video_run/U_FFIA27K_video/checkpoint/mobilevit_xxs/video_best.pt",
+    "checkpoint_path": "/marimo/checkpoints/video_run/U_FFIA27K_video/checkpoint/efficientnet_b0/video_best.pt",
     "cv_checkpoint_path": ""
   },
   "fusion": {
@@ -54,7 +54,8 @@
       "teacher_preservation_weight": 0.3,
       "temporal_num_layers": 2,
       "temporal_num_heads": 4,
-      "temporal_max_frames": 16
+      "temporal_max_frames": 16,
+      "decoder": "ordinal"
     }
   },
   "dataset": {
