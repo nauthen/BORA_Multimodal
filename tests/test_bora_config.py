@@ -132,3 +132,14 @@ def test_attention_ablation_gets_its_own_experiment_name() -> None:
     raw["fusion"]["bora"] = {"temporal_attention": "softmax"}
     with pytest.raises(ValidationError):
         TrainConfig.model_validate(raw)
+
+
+def test_decoder_ablation_is_temporal_only_and_named() -> None:
+    raw = _valid_bora_config()
+    raw["fusion"] = {"type": "temporal_bora_fusion", "bora": {"decoder": "nominal"}}
+    raw["video_features"] = {"num_frames": 2}
+    assert TrainConfig.model_validate(raw).experiment_name.endswith("_temporal_bora_fusion_nominal_decoder")
+    raw["fusion"]["type"] = "bora_fusion"
+    raw["video_features"] = {"num_frames": 1}
+    with pytest.raises(ValidationError, match="temporal_bora_fusion only"):
+        TrainConfig.model_validate(raw)

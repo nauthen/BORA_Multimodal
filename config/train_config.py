@@ -83,6 +83,10 @@ class BoraConfig(BaseModel):
     # video tokens. "cosine" is the proposed method; the others are ablations.
     # Every variant keeps the log event prior; "none" drops the query match.
     temporal_attention: Literal["cosine", "dot_product", "additive", "none"] = "cosine"
+    # Temporal BORA class decoder. "dual" (proposed) adds the nominal head to
+    # the CORN ordinal decoder; "ordinal" and "nominal" keep one head each and
+    # drop the other head's dedicated loss.
+    decoder: Literal["dual", "ordinal", "nominal"] = "dual"
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "BoraConfig":
@@ -236,6 +240,8 @@ class TrainConfig(BaseModel):
             raise ValueError("BORA-Fuse fine-tunes both encoders; audio.freeze and video.freeze must be false.")
         if self.fusion.type == "bora_fusion" and self.video_features.num_frames != 1:
             raise ValueError("Global BORA-Fuse requires video_features.num_frames=1.")
+        if self.fusion.type == "bora_fusion" and self.fusion.bora.decoder != "dual":
+            raise ValueError("fusion.bora.decoder applies to temporal_bora_fusion only.")
         if self.fusion.type == "temporal_bora_fusion":
             if self.video_features.num_frames < 2:
                 raise ValueError("Temporal BORA-Fuse requires video_features.num_frames>=2.")
@@ -256,6 +262,9 @@ class TrainConfig(BaseModel):
         attention = self.fusion.bora.temporal_attention
         if self.fusion.type == "temporal_bora_fusion" and attention != "cosine":
             name += f"_{attention}_attention"
+        decoder = self.fusion.bora.decoder
+        if self.fusion.type == "temporal_bora_fusion" and decoder != "dual":
+            name += f"_{decoder}_decoder"
         return name
 
     @classmethod

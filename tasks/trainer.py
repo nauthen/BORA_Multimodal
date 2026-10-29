@@ -453,6 +453,7 @@ class MultimodalTrainer:
                         motion_loss_weight=self.cfg.fusion.bora.motion_loss_weight,
                         nominal_loss_weight=self.cfg.fusion.bora.nominal_loss_weight,
                         teacher_preservation_weight=self.cfg.fusion.bora.teacher_preservation_weight,
+                        decoder=self.cfg.fusion.bora.decoder,
                     )
                 else:
                     if self.criterion is None:

@@ -170,11 +170,20 @@ def bora_loss(
     motion_loss_weight: float = 0.0,
     nominal_loss_weight: float = 0.0,
     teacher_preservation_weight: float = 0.0,
+    decoder: str = "dual",
 ) -> tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    if decoder not in {"dual", "ordinal", "nominal"}:
+        raise ValueError(f"Unknown decoder '{decoder}'.")
     ranks = labels_to_ranks(labels)
     targets, active = ordinal_targets_and_mask(ranks)
-    fused = corn_loss(output["ordinal_logits"], ranks)
     audio = corn_loss(output["audio_ordinal_logits"], ranks)
+    # A single-decoder ablation drops the removed head's dedicated loss. For
+    # "nominal" the nominal head is the final output, which the categorical
+    # term already supervises, so its separate cross-entropy would count twice.
+    if decoder == "nominal":
+        fused = audio.new_zeros(())
+    else:
+        fused = corn_loss(output["ordinal_logits"], ranks)
     video = corn_loss(output["video_ordinal_logits"], ranks)
 
     audio_element_bce = F.binary_cross_entropy_with_logits(
@@ -203,7 +212,7 @@ def bora_loss(
         motion = fused.new_zeros(())
     # Dual-decoder: direct nominal supervision so the exact-class decision is
     # not forced exclusively through the CORN conditional factorization.
-    if nominal_loss_weight > 0.0:
+    if nominal_loss_weight > 0.0 and decoder == "dual":
         if "nominal_logits" not in output:
             raise KeyError("nominal_logits is required when nominal_loss_weight > 0.")
         nominal = F.cross_entropy(output["nominal_logits"], labels.long())

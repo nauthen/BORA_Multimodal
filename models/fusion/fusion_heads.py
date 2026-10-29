@@ -271,7 +271,9 @@ class TemporalBORAFusion(nn.Module):
             nn.Sequential(nn.Linear(dim * 3, dim), nn.LayerNorm(dim), nn.GELU(), nn.Dropout(cfg.dropout))
             for _ in range(3)
         )
-        self.boundary_classifiers = nn.ModuleList(nn.Linear(dim, 1) for _ in range(3))
+        self.decoder = cfg.bora.decoder
+        if self.decoder != "nominal":
+            self.boundary_classifiers = nn.ModuleList(nn.Linear(dim, 1) for _ in range(3))
         self.motion_regressor = nn.Sequential(
             nn.Linear(dim, hidden), nn.GELU(), nn.Linear(hidden, 1), nn.Sigmoid()
         )
@@ -281,14 +283,16 @@ class TemporalBORAFusion(nn.Module):
         # lose exact-class signal even at near-perfect ranking quality; this
         # decoder observes all three boundary-conditioned temporal evidences
         # simultaneously and is coupled back through a learned logit residual.
-        self.nominal_head = nn.Sequential(
-            nn.Linear(dim * 3, hidden),
-            nn.LayerNorm(hidden),
-            _activation(cfg.activation),
-            nn.Dropout(cfg.dropout),
-            nn.Linear(hidden, num_classes),
-        )
-        self.nominal_residual_scale = nn.Parameter(torch.tensor(-1.1))
+        if self.decoder != "ordinal":
+            self.nominal_head = nn.Sequential(
+                nn.Linear(dim * 3, hidden),
+                nn.LayerNorm(hidden),
+                _activation(cfg.activation),
+                nn.Dropout(cfg.dropout),
+                nn.Linear(hidden, num_classes),
+            )
+        if self.decoder == "dual":
+            self.nominal_residual_scale = nn.Parameter(torch.tensor(-1.1))
 
     def set_epoch(self, epoch: int | None) -> None:
         self._warmup_active = epoch is not None and epoch < self.warmup_epochs
@@ -417,8 +421,10 @@ class TemporalBORAFusion(nn.Module):
                     dim=-1,
                 )
             )
-            learned_logit = self.boundary_classifiers[boundary](interaction)
             boundary_features.append(interaction)
+            if self.decoder == "nominal":
+                continue
+            learned_logit = self.boundary_classifiers[boundary](interaction)
             if teacher_audio_ordinal is not None and teacher_video_ordinal is not None:
                 teacher_logit = (
                     weights[:, boundary, 0] * teacher_audio_ordinal[:, boundary]
@@ -428,23 +434,35 @@ class TemporalBORAFusion(nn.Module):
                     self.teacher_residual_scale[boundary]
                 ) * teacher_logit
             boundary_logits.append(learned_logit)
-        ordinal_logits = torch.cat(boundary_logits, dim=1)
-        rank_probabilities = conditional_logits_to_rank_probabilities(ordinal_logits)
-        dataset_probabilities = rank_probabilities_to_dataset_order(rank_probabilities)
-        pooled_boundary_evidence = torch.stack(boundary_features, dim=1).mean(dim=1)
-        nominal_logits = self.nominal_head(
-            torch.cat([pooled_boundary_evidence, audio, video_global], dim=-1)
-        )
-        ordinal_log_probabilities = torch.log(dataset_probabilities.clamp_min(1e-8))
-        combined_logits = ordinal_log_probabilities + torch.sigmoid(
-            self.nominal_residual_scale
-        ) * nominal_logits
+        decoder_outputs: dict[str, torch.Tensor] = {}
+        if self.decoder != "nominal":
+            ordinal_logits = torch.cat(boundary_logits, dim=1)
+            rank_probabilities = conditional_logits_to_rank_probabilities(ordinal_logits)
+            dataset_probabilities = rank_probabilities_to_dataset_order(rank_probabilities)
+            combined_logits = torch.log(dataset_probabilities.clamp_min(1e-8))
+            decoder_outputs["ordinal_logits"] = ordinal_logits
+        if self.decoder != "ordinal":
+            pooled_boundary_evidence = torch.stack(boundary_features, dim=1).mean(dim=1)
+            nominal_logits = self.nominal_head(
+                torch.cat([pooled_boundary_evidence, audio, video_global], dim=-1)
+            )
+            decoder_outputs["nominal_logits"] = nominal_logits
+        if self.decoder == "dual":
+            combined_logits = combined_logits + torch.sigmoid(
+                self.nominal_residual_scale
+            ) * nominal_logits
+            decoder_outputs["nominal_residual_gate"] = torch.sigmoid(self.nominal_residual_scale)
+        elif self.decoder == "nominal":
+            combined_logits = nominal_logits
+            # Dataset order [none, strong, medium, weak] -> rank order; the
+            # permutation is its own inverse.
+            rank_probabilities = F.softmax(nominal_logits, dim=-1)[..., [0, 3, 2, 1]]
         clipwise_output = F.log_softmax(combined_logits, dim=-1)
         motion_score = self.motion_regressor(motion_context.mean(dim=1)).squeeze(-1)
         result = {
             "clipwise_output": clipwise_output,
             "rank_probabilities": rank_probabilities,
-            "ordinal_logits": ordinal_logits,
+            **decoder_outputs,
             "audio_ordinal_logits": audio_ordinal,
             "video_ordinal_logits": video_ordinal,
             "audio_reliability": audio_reliability,
@@ -458,8 +476,6 @@ class TemporalBORAFusion(nn.Module):
             "event_probabilities": event_probabilities,
             "motion_score": motion_score,
             "teacher_residual_scales": torch.sigmoid(self.teacher_residual_scale),
-            "nominal_logits": nominal_logits,
-            "nominal_residual_gate": torch.sigmoid(self.nominal_residual_scale),
         }
         if teacher_audio_probabilities is not None and teacher_video_probabilities is not None:
             result["audio_teacher_probabilities"] = teacher_audio_probabilities

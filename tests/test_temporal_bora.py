@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+import torch.nn.functional as F
 
 from config import FusionConfig, TrainConfig
 from dataset.video_loader import _stratified_frame_indices, _uniform_frame_indices
@@ -181,3 +182,42 @@ def test_cosine_attention_keeps_checkpoint_layout() -> None:
     names = set(TemporalBORAFusion(10, 12, 4, _fusion_config()).state_dict())
     assert {"boundary_queries", "attention_logit_scale", "audio_query.weight"} <= names
     assert not any(name.startswith("attention_") and name != "attention_logit_scale" for name in names)
+
+
+@pytest.mark.parametrize("decoder", ["dual", "ordinal", "nominal"])
+def test_decoder_variants_train_end_to_end(decoder: str) -> None:
+    cfg = _fusion_config()
+    cfg.bora.decoder = decoder
+    head = TemporalBORAFusion(10, 12, 4, cfg)
+    head.set_epoch(3)
+    output = head(
+        torch.randn(6, 10),
+        torch.randn(6, 5, 12),
+        audio_teacher_logits=torch.randn(6, 4),
+        video_teacher_logits=torch.randn(6, 5, 4),
+    )
+    assert torch.allclose(output["clipwise_output"].exp().sum(1), torch.ones(6), atol=1e-5)
+    assert torch.allclose(output["rank_probabilities"].sum(1), torch.ones(6), atol=1e-5)
+    assert ("ordinal_logits" in output) == (decoder != "nominal")
+    assert ("nominal_logits" in output) == (decoder != "ordinal")
+    assert ("nominal_residual_gate" in output) == (decoder == "dual")
+    labels = torch.tensor([0, 1, 2, 3, 0, 1])
+    loss, parts = bora_loss(
+        output, labels, aux_loss_weight=0.3, reliability_loss_weight=0.1,
+        categorical_loss_weight=1.0, motion_loss_weight=0.1, nominal_loss_weight=0.5,
+        teacher_preservation_weight=0.3, decoder=decoder,
+    )
+    assert (float(parts["fused"]) > 0.0) == (decoder != "nominal")
+    assert (float(parts["nominal"]) > 0.0) == (decoder == "dual")
+    loss.backward()
+    for name, parameter in head.named_parameters():
+        assert parameter.grad is not None and torch.isfinite(parameter.grad).all(), name
+    if decoder == "nominal":
+        # The final prediction is the nominal head alone, read in rank order.
+        nominal = F.softmax(output["nominal_logits"], dim=-1)
+        assert torch.allclose(output["rank_probabilities"], nominal[:, [0, 3, 2, 1]])
+
+
+def test_dual_decoder_keeps_checkpoint_layout() -> None:
+    names = set(TemporalBORAFusion(10, 12, 4, _fusion_config()).state_dict())
+    assert {"boundary_classifiers.0.weight", "nominal_head.0.weight", "nominal_residual_scale"} <= names
